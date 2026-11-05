@@ -72,6 +72,8 @@ final class TranslationJob: Identifiable {
             }
             framesUsed = frames.count
             guard !frames.isEmpty else { throw JobError.noFrames }
+            let conversationID = conversation.id
+            Task.detached(priority: .utility) { FrameStore.save(frames, for: conversationID) }
 
             // 2. Read + stitch, in order, publishing as we go.
             phase = .reading(done: 0, total: frames.count)

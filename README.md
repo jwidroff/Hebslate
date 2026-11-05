@@ -36,6 +36,7 @@ Features:
 * Long-press a bubble to copy the translation or the Hebrew, or to delete junk (for example text picked up from Control Center at the start of a recording).
 * Share or copy the whole translation as a text transcript.
 * Translated chats are saved on the device under **Recent translations**.
+* **⋯ › View frames used** shows every key frame the recording was read from, in order, so if a message looks wrong, scrambled or missing you can check what the recording actually showed at that point.
 * Light and dark mode both use WhatsApp's colors.
 
 ## Project layout

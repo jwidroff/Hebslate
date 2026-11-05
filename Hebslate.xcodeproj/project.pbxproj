@@ -21,6 +21,8 @@
 		2CD3C3D26C5835C0D824BD44 /* BubbleLineAssembler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80A25116B7127F5C2FAEEBFE /* BubbleLineAssembler.swift */; };
 		D6F1202CD18FA812C55BEFFB /* GoogleClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B15B0A5BCD2B69E39521C1E0 /* GoogleClient.swift */; };
 		EC70CD9F9A7AAFE461A65FFF /* DefaultAPIKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A1A871D5DF30C0618B150A1 /* DefaultAPIKeys.swift */; };
+		6A58607AC89F4F978DABA018 /* FrameStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA474B145CF9430F902BA0C8 /* FrameStore.swift */; };
+		C20E3CC47D004734999ED03C /* FramesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A1A031E86A149EBBA1CE7FF /* FramesView.swift */; };
 		BAD02631309C9207004ED7A2 /* HebslateCore in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000100020 /* HebslateCore */; };
 /* End PBXBuildFile section */
 
@@ -39,6 +41,8 @@
 		80A25116B7127F5C2FAEEBFE /* BubbleLineAssembler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BubbleLineAssembler.swift; sourceTree = "<group>"; };
 		B15B0A5BCD2B69E39521C1E0 /* GoogleClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleClient.swift; sourceTree = "<group>"; };
 		8A1A871D5DF30C0618B150A1 /* DefaultAPIKeys.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultAPIKeys.swift; sourceTree = "<group>"; };
+		EA474B145CF9430F902BA0C8 /* FrameStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameStore.swift; sourceTree = "<group>"; };
+		9A1A031E86A149EBBA1CE7FF /* FramesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FramesView.swift; sourceTree = "<group>"; };
 		00000000000000000010001D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		00000000000000000010001E /* Hebslate.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hebslate.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -100,6 +104,7 @@
 				00000000000000000010000B /* AppSettings.swift */,
 				00000000000000000010000D /* ConversationStore.swift */,
 				8A1A871D5DF30C0618B150A1 /* DefaultAPIKeys.swift */,
+				EA474B145CF9430F902BA0C8 /* FrameStore.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -108,6 +113,7 @@
 			isa = PBXGroup;
 			children = (
 				000000000000000000100011 /* ConversationView.swift */,
+				9A1A031E86A149EBBA1CE7FF /* FramesView.swift */,
 				000000000000000000100013 /* HomeView.swift */,
 				000000000000000000100015 /* JobScreen.swift */,
 				000000000000000000100017 /* MessageBubble.swift */,
@@ -202,7 +208,9 @@
 				00000000000000000010000C /* AppSettings.swift in Sources */,
 				00000000000000000010000E /* ConversationStore.swift in Sources */,
 				EC70CD9F9A7AAFE461A65FFF /* DefaultAPIKeys.swift in Sources */,
+				6A58607AC89F4F978DABA018 /* FrameStore.swift in Sources */,
 				000000000000000000100012 /* ConversationView.swift in Sources */,
+				C20E3CC47D004734999ED03C /* FramesView.swift in Sources */,
 				000000000000000000100014 /* HomeView.swift in Sources */,
 				000000000000000000100016 /* JobScreen.swift in Sources */,
 				000000000000000000100018 /* MessageBubble.swift in Sources */,

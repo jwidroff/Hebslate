@@ -41,6 +41,7 @@ final class ConversationStore {
 
     func delete(_ conversation: Conversation) {
         try? FileManager.default.removeItem(at: url(for: conversation.id))
+        FrameStore.delete(for: conversation.id)
         conversations.removeAll { $0.id == conversation.id }
     }
 

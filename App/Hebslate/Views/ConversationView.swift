@@ -52,12 +52,16 @@ struct ConversationView: View {
                     Button("Copy translation", systemImage: "doc.on.doc") {
                         UIPasteboard.general.string = conversation.transcript(includeOriginal: showOriginal)
                     }
+                    NavigationLink(value: FramesDestination(conversationID: conversation.id)) {
+                        Label("View frames used", systemImage: "photo.on.rectangle.angled")
+                    }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(for: FramesDestination.self) { FramesView(conversationID: $0.conversationID) }
     }
 
     private var header: some View {
@@ -86,6 +90,11 @@ struct ConversationView: View {
         }
         .tint(ChatTheme.metaText)
     }
+}
+
+/// Navigation value for pushing `FramesView` from the conversation's menu.
+struct FramesDestination: Hashable {
+    let conversationID: UUID
 }
 
 /// Circle with the contact's initial, like a placeholder profile photo.
