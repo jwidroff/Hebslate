@@ -11,11 +11,30 @@ public enum MessageSide: String, Codable, Sendable, Hashable {
     case system
 }
 
+/// A patch of text to render over an image message, positioned relative to
+/// the image itself (0...1, origin top-left), not the frame it came from.
+/// `original` is the Hebrew OCR found at that spot; `translation` is filled
+/// in by the translator, same as `ChatMessage.translation`.
+public struct ImageOverlay: Codable, Sendable, Hashable {
+    public var box: NormRect
+    public var original: String
+    public var translation: String?
+
+    public init(box: NormRect, original: String, translation: String? = nil) {
+        self.box = box
+        self.original = original
+        self.translation = translation
+    }
+}
+
 /// A single message as seen in ONE frame of the screen recording.
 ///
-/// Produced either by on-device OCR (Vision + bubble-color heuristics) or by
-/// the Claude vision extractor. `cutOffTop` / `cutOffBottom` mean the bubble
-/// runs past the visible chat area, so `text` is only part of the message.
+/// Produced by OCR (Cloud Vision + bubble-color heuristics). `cutOffTop` /
+/// `cutOffBottom` mean the bubble runs past the visible chat area, so `text`
+/// is only part of the message. When the bubble is a photo with Hebrew text
+/// baked into it, `imageData` holds the cropped photo and `imageOverlays`
+/// locates each patch of text within it; `text` is still the joined OCR text
+/// (for stitching and search), but the photo should be shown instead.
 public struct FrameMessage: Codable, Sendable, Hashable {
     public var side: MessageSide
     public var text: String
@@ -23,19 +42,25 @@ public struct FrameMessage: Codable, Sendable, Hashable {
     public var time: String?
     public var cutOffTop: Bool
     public var cutOffBottom: Bool
+    public var imageData: Data?
+    public var imageOverlays: [ImageOverlay]
 
     public init(side: MessageSide,
                 text: String,
                 sender: String? = nil,
                 time: String? = nil,
                 cutOffTop: Bool = false,
-                cutOffBottom: Bool = false) {
+                cutOffBottom: Bool = false,
+                imageData: Data? = nil,
+                imageOverlays: [ImageOverlay] = []) {
         self.side = side
         self.text = text
         self.sender = sender
         self.time = time
         self.cutOffTop = cutOffTop
         self.cutOffBottom = cutOffBottom
+        self.imageData = imageData
+        self.imageOverlays = imageOverlays
     }
 
     public var isPartial: Bool { cutOffTop || cutOffBottom }
@@ -74,6 +99,10 @@ public struct ChatMessage: Codable, Sendable, Identifiable, Hashable {
     /// Marks a place where frames did not overlap (the user scrolled faster
     /// than the recording could capture), so messages may be missing here.
     public var isGapMarker: Bool
+    /// A photo with Hebrew text baked into it, shown instead of a plain
+    /// translated bubble; see `FrameMessage.imageData`.
+    public var imageData: Data?
+    public var imageOverlays: [ImageOverlay]
 
     public init(id: UUID = UUID(),
                 side: MessageSide,
@@ -83,7 +112,9 @@ public struct ChatMessage: Codable, Sendable, Identifiable, Hashable {
                 time: String? = nil,
                 cutOffTop: Bool = false,
                 cutOffBottom: Bool = false,
-                isGapMarker: Bool = false) {
+                isGapMarker: Bool = false,
+                imageData: Data? = nil,
+                imageOverlays: [ImageOverlay] = []) {
         self.id = id
         self.side = side
         self.original = original
@@ -93,17 +124,23 @@ public struct ChatMessage: Codable, Sendable, Identifiable, Hashable {
         self.cutOffTop = cutOffTop
         self.cutOffBottom = cutOffBottom
         self.isGapMarker = isGapMarker
+        self.imageData = imageData
+        self.imageOverlays = imageOverlays
     }
 
     public init(_ m: FrameMessage) {
         self.init(side: m.side, original: m.text, sender: m.sender, time: m.time,
-                  cutOffTop: m.cutOffTop, cutOffBottom: m.cutOffBottom)
+                  cutOffTop: m.cutOffTop, cutOffBottom: m.cutOffBottom,
+                  imageData: m.imageData, imageOverlays: m.imageOverlays)
     }
 
     public var isPartial: Bool { cutOffTop || cutOffBottom }
+    public var isImage: Bool { imageData != nil }
 
     public var needsTranslation: Bool {
-        !isGapMarker && translation == nil && !original.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        guard !isGapMarker else { return false }
+        if !imageOverlays.isEmpty { return imageOverlays.contains { $0.translation == nil } }
+        return translation == nil && !original.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     public static func gap() -> ChatMessage {

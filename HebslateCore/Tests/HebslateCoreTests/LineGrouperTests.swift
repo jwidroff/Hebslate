@@ -29,7 +29,7 @@ final class LineGrouperTests: XCTestCase {
             line("10:42 ✓✓", x: 0.75, y: 0.325, w: 0.15, color: green),
             line("נדבר אחר כך", x: 0.5, y: 0.37, w: 0.4, color: green, same: false),
         ]
-        let (_, msgs) = LineGrouper().group(lines)
+        let (_, msgs, _) = LineGrouper().group(lines)
         XCTAssertEqual(msgs.map(\.side), [.system, .incoming, .outgoing, .outgoing])
         XCTAssertEqual(msgs[1].text, "היי, מה נשמע?\nשאלה קטנה")
         XCTAssertEqual(msgs[1].time, "10:41")
@@ -46,7 +46,7 @@ final class LineGrouperTests: XCTestCase {
             line("שלום", x: 0.05, y: 0.4, w: 0.2, color: white),
             OCRLine(text: "הקלד/י הודעה", box: NormRect(x: 0.2, y: 0.95, width: 0.3, height: 0.02)),
         ]
-        let (name, msgs) = LineGrouper().group(lines)
+        let (name, msgs, _) = LineGrouper().group(lines)
         XCTAssertEqual(name, "יוסי כהן")
         XCTAssertEqual(msgs.map(\.text), ["שלום"])
     }
@@ -56,7 +56,7 @@ final class LineGrouperTests: XCTestCase {
             line("סוף של הודעה ארוכה", x: 0.05, y: 0.118, color: white),
             line("תחילת הודעה", x: 0.5, y: 0.885, w: 0.4, color: green),
         ]
-        let (_, msgs) = LineGrouper().group(lines)
+        let (_, msgs, _) = LineGrouper().group(lines)
         XCTAssertTrue(msgs[0].cutOffTop)
         XCTAssertTrue(msgs[1].cutOffBottom)
     }

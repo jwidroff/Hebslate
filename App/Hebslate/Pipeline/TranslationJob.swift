@@ -147,8 +147,9 @@ final class TranslationJob: Identifiable {
         for chunkStart in stride(from: 0, to: pending.count, by: 40) {
             try Task.checkCancellation()
             let chunk = Array(pending[chunkStart..<min(chunkStart + 40, pending.count)])
-            let translations = try await client.translate(chunk)
-            stitcher.applyTranslations(translations)
+            let result = try await client.translate(chunk)
+            stitcher.applyTranslations(result.messages)
+            stitcher.applyOverlayTranslations(result.overlays)
             done += chunk.count
             phase = .translating(done: done, total: pending.count)
             publish()

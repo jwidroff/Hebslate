@@ -55,12 +55,12 @@ struct GoogleClient {
     }
 
     /// Cloud Vision groups recognized text as pages > blocks > paragraphs >
-    /// words > symbols — but a paragraph can span several visual lines (a
-    /// wrapped WhatsApp bubble is usually one paragraph with `LINE_BREAK`
-    /// symbols inside it), unlike Apple Vision's one-observation-per-line
-    /// output. Split each paragraph back into per-line (text, box) pairs at
-    /// its `LINE_BREAK` symbols so `BubbleLineAssembler` sees the same
-    /// per-visual-line granularity either reader produces.
+    /// words > symbols, and a wrapped WhatsApp bubble is normally one
+    /// paragraph with `LINE_BREAK` symbols inside it. Keep each paragraph as
+    /// one (text, box) unit — internal line breaks become "\n" rather than
+    /// a new unit — so `BubbleLineAssembler` never has to re-decide whether
+    /// two wrapped lines of the same bubble belong together; that was the
+    /// main source of one bubble getting split into several messages.
     private static func parseLines(_ data: Data) throws -> [(text: String, box: NormRect)] {
         guard let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               let responses = obj["responses"] as? [[String: Any]], let first = responses.first else {
@@ -81,25 +81,18 @@ struct GoogleClient {
         var lines: [(text: String, box: NormRect)] = []
         for block in (page["blocks"] as? [[String: Any]]) ?? [] {
             for paragraph in (block["paragraphs"] as? [[String: Any]]) ?? [] {
-                lines.append(contentsOf: visualLines(in: paragraph, width: width, height: height))
+                if let line = paragraphLine(in: paragraph, width: width, height: height) { lines.append(line) }
             }
         }
         return lines
     }
 
-    /// Walks a paragraph's symbols, starting a new line at each `LINE_BREAK`,
-    /// and computes each line's box from the union of its symbols' own boxes.
-    private static func visualLines(in paragraph: [String: Any], width: Double, height: Double) -> [(text: String, box: NormRect)] {
-        var result: [(text: String, box: NormRect)] = []
+    /// Walks a paragraph's symbols into one piece of text (inserting "\n" at
+    /// each `LINE_BREAK` instead of starting a new unit), with a box from
+    /// the union of every symbol's own box.
+    private static func paragraphLine(in paragraph: [String: Any], width: Double, height: Double) -> (text: String, box: NormRect)? {
         var text = ""
         var xs: [Double] = [], ys: [Double] = []
-
-        func flush() {
-            defer { text = ""; xs = []; ys = [] }
-            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty, let minX = xs.min(), let maxX = xs.max(), let minY = ys.min(), let maxY = ys.max() else { return }
-            result.append((trimmed, NormRect(x: minX / width, y: minY / height, width: (maxX - minX) / width, height: (maxY - minY) / height)))
-        }
 
         for word in (paragraph["words"] as? [[String: Any]]) ?? [] {
             for symbol in (word["symbols"] as? [[String: Any]]) ?? [] {
@@ -109,25 +102,51 @@ struct GoogleClient {
                     if let y = (v["y"] as? NSNumber)?.doubleValue { ys.append(y) }
                 }
                 switch (((symbol["property"] as? [String: Any])?["detectedBreak"] as? [String: Any])?["type"] as? String) ?? "" {
-                case "LINE_BREAK": flush()
+                case "LINE_BREAK": text += "\n"
                 case "SPACE", "EOL_SURE_SPACE": text += " "
                 default: break
                 }
             }
         }
-        flush()
-        return result
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let minX = xs.min(), let maxX = xs.max(), let minY = ys.min(), let maxY = ys.max() else { return nil }
+        return (trimmed, NormRect(x: minX / width, y: minY / height, width: (maxX - minX) / width, height: (maxY - minY) / height))
     }
 
     // MARK: - Translation (Cloud Translation v2)
 
-    /// Translates `items`' original text into English. Returns no context to
-    /// Google beyond the text itself (v2 is a bare translation endpoint).
-    func translate(_ items: [ChatMessage]) async throws -> [UUID: String] {
-        let pending = items.filter { !$0.original.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-        guard !pending.isEmpty else { return [:] }
+    /// Translations for a batch of messages: whole-bubble text for plain
+    /// messages, and one entry per overlay (index-aligned to
+    /// `ChatMessage.imageOverlays`) for image messages.
+    struct TranslationResult: Sendable {
+        var messages: [UUID: String] = [:]
+        var overlays: [UUID: [String]] = [:]
+    }
+
+    /// Translates `items` into English: each plain message's text, and each
+    /// image message's overlay texts individually (so an overlay's
+    /// translation is never a fragment split out of a merged string).
+    /// Returns no context to Google beyond the text itself (v2 is a bare
+    /// translation endpoint).
+    func translate(_ items: [ChatMessage]) async throws -> TranslationResult {
+        enum Target { case message(UUID), overlay(UUID, Int) }
+        var targets: [Target] = []
+        var texts: [String] = []
+        for item in items {
+            if item.imageOverlays.isEmpty {
+                let text = item.original.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !text.isEmpty else { continue }
+                targets.append(.message(item.id)); texts.append(item.original)
+            } else {
+                for (i, overlay) in item.imageOverlays.enumerated() {
+                    guard !overlay.original.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { continue }
+                    targets.append(.overlay(item.id, i)); texts.append(overlay.original)
+                }
+            }
+        }
+        guard !texts.isEmpty else { return TranslationResult() }
         let body: [String: Any] = [
-            "q": pending.map(\.original),
+            "q": texts,
             "source": "iw",
             "target": "en",
             "format": "text",
@@ -138,11 +157,20 @@ struct GoogleClient {
               let translations = dataObj["translations"] as? [[String: Any]] else {
             throw GoogleError.badResponse("not JSON")
         }
-        var out: [UUID: String] = [:]
-        for (item, translation) in zip(pending, translations) {
-            if let text = translation["translatedText"] as? String { out[item.id] = text }
+        var result = TranslationResult()
+        var overlayBuckets: [UUID: [Int: String]] = [:]
+        for (target, translation) in zip(targets, translations) {
+            guard let text = translation["translatedText"] as? String else { continue }
+            switch target {
+            case .message(let id): result.messages[id] = text
+            case .overlay(let id, let index): overlayBuckets[id, default: [:]][index] = text
+            }
         }
-        return out
+        for (id, bucket) in overlayBuckets {
+            let count = (bucket.keys.max() ?? -1) + 1
+            result.overlays[id] = (0..<count).map { bucket[$0] ?? "" }
+        }
+        return result
     }
 
     // MARK: - HTTP

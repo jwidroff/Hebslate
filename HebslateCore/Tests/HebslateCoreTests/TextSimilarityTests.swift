@@ -30,7 +30,11 @@ final class ScrollEstimatorTests: XCTestCase {
 
     /// A fake "chat" brightness profile with distinct bumps (bubbles).
     func content(_ length: Int) -> [Double] {
-        (0..<length).map { i in 120 + 80 * sin(Double(i) / 7) + Double((i * 37) % 23) }
+        (0..<length).map { i -> Double in
+            let wave: Double = 80 * sin(Double(i) / 7)
+            let noise: Double = Double((i * 37) % 23)
+            return 120 + wave + noise
+        }
     }
 
     func testDetectsUpwardShift() {

@@ -86,7 +86,10 @@ public struct LineGrouper: Sendable {
 
     public init(layout: Layout = Layout()) { self.layout = layout }
 
-    public func group(_ allLines: [OCRLine]) -> (contactName: String?, messages: [FrameMessage]) {
+    /// `groups[i]` are the raw OCR lines that were merged into `messages[i]`,
+    /// so a caller with access to the frame's pixels (the app target) can
+    /// decide whether that bubble is a photo and, if so, where its text sat.
+    public func group(_ allLines: [OCRLine]) -> (contactName: String?, messages: [FrameMessage], groups: [[OCRLine]]) {
         let header = allLines.filter { $0.box.midY < layout.chatTop }
         let lines = allLines
             .filter { $0.box.midY >= layout.chatTop && $0.box.midY <= layout.chatBottom }
@@ -94,12 +97,16 @@ public struct LineGrouper: Sendable {
             .sorted { $0.box.minY < $1.box.minY }
 
         var messages: [FrameMessage] = []
+        var groups: [[OCRLine]] = []
         var current: [OCRLine] = []
         var currentSide: MessageSide = .incoming
 
         func flush() {
             guard !current.isEmpty else { return }
-            if let msg = makeMessage(current, side: currentSide) { messages.append(msg) }
+            if let msg = makeMessage(current, side: currentSide) {
+                messages.append(msg)
+                groups.append(current)
+            }
             current = []
         }
 
@@ -126,7 +133,7 @@ public struct LineGrouper: Sendable {
         }
         flush()
 
-        return (contactName(from: header), messages)
+        return (contactName(from: header), messages, groups)
     }
 
     // MARK: - Classification
