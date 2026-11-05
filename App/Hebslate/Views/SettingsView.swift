@@ -13,6 +13,7 @@ struct SettingsView: View {
     @AppStorage(SettingsKey.showOriginal) private var showOriginal = false
 
     @State private var apiKey = KeychainStore.read(KeychainStore.claudeAPIKey) ?? ""
+    @State private var googleKey = KeychainStore.read(KeychainStore.googleAPIKey) ?? ""
     @State private var visionHebrew = VisionReader.supportsHebrew
     @State private var appleStatus: LanguageAvailability.Status?
 
@@ -39,7 +40,21 @@ struct SettingsView: View {
             } header: {
                 Text("Engines")
             } footer: {
-                Text("Automatic reads on-device when this iPhone supports Hebrew text recognition and otherwise uses Claude. It translates with Claude when an API key is set (better with slang and context) and otherwise with Apple Translate, fully on-device.")
+                Text("Automatic reads on-device when this iPhone supports Hebrew text recognition, then Google, then Claude. It translates with Google when a Google key is set, then Claude, then Apple Translate.")
+            }
+
+            Section {
+                SecureField("AIza…", text: $googleKey)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .onChange(of: googleKey) { _, value in
+                        KeychainStore.write(value.trimmingCharacters(in: .whitespacesAndNewlines), for: KeychainStore.googleAPIKey)
+                    }
+                Link("Open Google Cloud console", destination: URL(string: "https://console.cloud.google.com/apis/credentials")!)
+            } header: {
+                Text("Google Cloud")
+            } footer: {
+                Text("One key handles both reading and translating. In the Google Cloud console: create a project, enable \"Cloud Vision API\" and \"Cloud Translation API\", then create an API key (optionally restricted to the iOS app com.hebslate.app). Google requires billing to be turned on for the project; its free tier currently covers about 1,000 frames and 500,000 translated characters a month, and a typical recording uses 10–40 frames. The key is stored in the iOS Keychain on this device only.")
             }
 
             Section {

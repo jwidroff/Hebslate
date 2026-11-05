@@ -4,6 +4,7 @@ import Security
 /// Minimal Keychain wrapper for the Claude API key.
 enum KeychainStore {
     static let claudeAPIKey = "claude-api-key"
+    static let googleAPIKey = "google-cloud-api-key"
     private static let service = "com.hebslate.app"
 
     static func read(_ account: String) -> String? {

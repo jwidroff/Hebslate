@@ -45,7 +45,7 @@ final class TranslationJob: Identifiable {
         self.videoURL = videoURL
         self.settings = settings
         self.onFinish = onFinish
-        self.conversation = Conversation(title: "Translating…", messages: [])
+        self.conversation = Conversation(title: "New translation", messages: [])
     }
 
     func start() {
@@ -89,6 +89,9 @@ final class TranslationJob: Identifiable {
             case .claude:
                 try await translateWithClaude()
                 finish()
+            case .google:
+                try await translateWithGoogle()
+                finish()
             }
         } catch is CancellationError {
             phase = .failed("Cancelled")
@@ -97,18 +100,22 @@ final class TranslationJob: Identifiable {
         }
     }
 
-    private enum Reader { case vision(VisionReader), claude(ClaudeClient) }
+    private enum Reader { case vision(VisionReader), google(GoogleCloudClient), claude(ClaudeClient) }
 
     private func resolveReader() throws -> Reader {
         switch settings.reader {
         case .onDevice:
             guard VisionReader.supportsHebrew else { throw VisionReader.ReadError.hebrewUnsupported }
             return .vision(VisionReader(layout: settings.layout))
+        case .google:
+            guard let key = settings.googleKey else { throw GoogleCloudClient.GoogleError.missingKey }
+            return .google(GoogleCloudClient(apiKey: key))
         case .claude:
             guard let key = settings.apiKey else { throw ClaudeClient.ClaudeError.missingKey }
             return .claude(ClaudeClient(apiKey: key, model: settings.model))
         case .auto:
             if VisionReader.supportsHebrew { return .vision(VisionReader(layout: settings.layout)) }
+            if let key = settings.googleKey { return .google(GoogleCloudClient(apiKey: key)) }
             if let key = settings.apiKey { return .claude(ClaudeClient(apiKey: key, model: settings.model)) }
             throw JobError.noReader
         }
@@ -120,12 +127,16 @@ final class TranslationJob: Identifiable {
         case .apple:
             guard appleStatus != .unsupported else { throw JobError.appleTranslationUnsupported }
             return .apple
+        case .google:
+            guard settings.googleKey != nil else { throw GoogleCloudClient.GoogleError.missingKey }
+            return .google
         case .claude:
             guard settings.apiKey != nil else { throw ClaudeClient.ClaudeError.missingKey }
             return .claude
         case .auto:
-            // Prefer Claude when a key is set: it sees the whole conversation,
-            // so slang and context translate better. Otherwise stay on-device.
+            // Google when its key is set, then Claude (sees the whole
+            // conversation, better with slang), then Apple on-device.
+            if settings.googleKey != nil { return .google }
             if settings.apiKey != nil { return .claude }
             if appleStatus != .unsupported { return .apple }
             throw JobError.noTranslator
@@ -143,30 +154,39 @@ final class TranslationJob: Identifiable {
                 done += 1
                 phase = .reading(done: done, total: frames.count)
             }
+        case .google(let client):
+            let layout = settings.layout
+            try await readInParallel(frames) { frame in try await client.readFrame(frame, layout: layout) }
         case .claude(let client):
-            // Read up to 4 frames in parallel but stitch strictly in order.
-            var results: [Int: FrameReading] = [:]
-            var next = 0
-            try await withThrowingTaskGroup(of: (Int, FrameReading).self) { group in
-                var launched = 0
-                while launched < min(4, frames.count) {
-                    let i = launched, frame = frames[i]
-                    group.addTask { (i, try await client.readFrame(frame)) }
-                    launched += 1
+            try await readInParallel(frames) { frame in try await client.readFrame(frame) }
+        }
+    }
+
+    /// Reads up to 4 frames at once over the network, but stitches strictly in order.
+    private func readInParallel(_ frames: [KeyFrame],
+                                read: @escaping @Sendable (KeyFrame) async throws -> FrameReading) async throws {
+        var done = 0
+        var results: [Int: FrameReading] = [:]
+        var next = 0
+        try await withThrowingTaskGroup(of: (Int, FrameReading).self) { group in
+            var launched = 0
+            while launched < min(4, frames.count) {
+                let i = launched, frame = frames[i]
+                group.addTask { (i, try await read(frame)) }
+                launched += 1
+            }
+            while let (i, reading) = try await group.next() {
+                results[i] = reading
+                while let r = results.removeValue(forKey: next) {
+                    absorb(r)
+                    next += 1
                 }
-                while let (i, reading) = try await group.next() {
-                    results[i] = reading
-                    while let r = results.removeValue(forKey: next) {
-                        absorb(r)
-                        next += 1
-                    }
-                    done += 1
-                    phase = .reading(done: done, total: frames.count)
-                    if launched < frames.count {
-                        let li = launched, frame = frames[li]
-                        group.addTask { (li, try await client.readFrame(frame)) }
-                        launched += 1
-                    }
+                done += 1
+                phase = .reading(done: done, total: frames.count)
+                if launched < frames.count {
+                    let li = launched, frame = frames[li]
+                    group.addTask { (li, try await read(frame)) }
+                    launched += 1
                 }
             }
         }
@@ -215,6 +235,22 @@ final class TranslationJob: Identifiable {
         }
     }
 
+    private func translateWithGoogle() async throws {
+        guard let key = settings.googleKey else { throw GoogleCloudClient.GoogleError.missingKey }
+        let client = GoogleCloudClient(apiKey: key)
+        let pending = stitcher.untranslated
+        phase = .translating(done: 0, total: pending.count)
+        var done = 0
+        for chunkStart in stride(from: 0, to: pending.count, by: 100) {
+            try Task.checkCancellation()
+            let chunk = Array(pending[chunkStart..<min(chunkStart + 100, pending.count)])
+            stitcher.applyTranslations(try await client.translate(chunk))
+            done += chunk.count
+            phase = .translating(done: done, total: pending.count)
+            publish()
+        }
+    }
+
     /// Called by the view from `.translationTask` once Apple's session is ready.
     func translateWithApple(_ session: TranslationSession) async {
         guard phase == .awaitingAppleTranslation else { return }
@@ -256,9 +292,9 @@ final class TranslationJob: Identifiable {
             switch self {
             case .noFrames: "Couldn't read any frames from that video."
             case .noMessages: "No WhatsApp messages were found in the recording. Make sure the chat fills the screen while recording."
-            case .noReader: "On-device Hebrew text recognition isn't available on this iPhone. Add a Claude API key in Settings to read the recording with Claude."
-            case .noTranslator: "Hebrew isn't available in Apple Translate on this iPhone. Add a Claude API key in Settings to translate with Claude."
-            case .appleTranslationUnsupported: "Apple Translate doesn't support Hebrew → English on this iPhone. Switch the translator to Claude in Settings."
+            case .noReader: "Apple can't read Hebrew text on this iPhone. Add a Google Cloud (or Claude) API key in Settings to read the recording."
+            case .noTranslator: "Apple Translate doesn't support Hebrew on this iPhone. Add a Google Cloud (or Claude) API key in Settings to translate."
+            case .appleTranslationUnsupported: "Apple Translate doesn't support Hebrew → English on this iPhone. Switch the translator to Google or Claude in Settings."
             }
         }
     }

@@ -3,9 +3,8 @@ import Foundation
 import HebslateCore
 import Vision
 
-/// Reads a WhatsApp frame on-device: Apple Vision finds the text lines, and the
-/// pixel colors around each line tell us which bubble (incoming / outgoing /
-/// system) it belongs to and where one bubble ends and the next begins.
+/// Reads a WhatsApp frame on-device with Apple Vision. Hebrew support depends
+/// on the iOS version, so it is checked at runtime.
 struct VisionReader {
     var layout: LineGrouper.Layout
 
@@ -22,7 +21,7 @@ struct VisionReader {
     enum ReadError: LocalizedError {
         case hebrewUnsupported
         var errorDescription: String? {
-            "On-device Hebrew text recognition isn't available on this iOS version. Choose Claude as the reader in Settings."
+            "Apple's on-device text recognition can't read Hebrew on this iPhone. Choose Google or Claude as the reader in Settings."
         }
     }
 
@@ -35,12 +34,33 @@ struct VisionReader {
         request.usesLanguageCorrection = true
         try VNImageRequestHandler(cgImage: frame.image, options: [:]).perform([request])
 
-        let bitmap = Bitmap(frame.image)
-        var lines: [OCRLine] = (request.results ?? []).compactMap { obs in
+        let lines: [RawTextLine] = (request.results ?? []).compactMap { obs in
             guard let candidate = obs.topCandidates(1).first else { return nil }
             let b = obs.boundingBox   // normalized, origin bottom-left
-            let box = NormRect(x: b.minX, y: 1 - b.maxY, width: b.width, height: b.height)
-            return OCRLine(text: candidate.string, box: box, bubbleColor: bitmap.flatMap { bubbleColor(around: box, in: $0) })
+            return RawTextLine(text: candidate.string, box: NormRect(x: b.minX, y: 1 - b.maxY, width: b.width, height: b.height))
+        }
+        return BubbleAnalyzer(layout: layout).reading(from: lines, frame: frame)
+    }
+}
+
+/// A line of text and where it is on the frame, from any OCR engine.
+struct RawTextLine: Sendable {
+    var text: String
+    /// Normalized to the frame, origin top-left.
+    var box: NormRect
+}
+
+/// Turns OCR lines (from Apple Vision or Google Cloud Vision) into a frame's
+/// chat messages. The pixel colors around each line tell us which bubble
+/// (incoming / outgoing / system) it belongs to and where one bubble ends and
+/// the next begins.
+struct BubbleAnalyzer {
+    var layout: LineGrouper.Layout
+
+    func reading(from raw: [RawTextLine], frame: KeyFrame) -> FrameReading {
+        let bitmap = Bitmap(frame.image)
+        var lines: [OCRLine] = raw.map { line in
+            OCRLine(text: line.text, box: line.box, bubbleColor: bitmap.flatMap { bubbleColor(around: line.box, in: $0) })
         }
         lines.sort { $0.box.minY < $1.box.minY }
 
