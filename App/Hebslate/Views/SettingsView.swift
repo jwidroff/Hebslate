@@ -54,7 +54,11 @@ struct SettingsView: View {
             } header: {
                 Text("Google Cloud")
             } footer: {
-                Text("One key handles both reading and translating. In the Google Cloud console: create a project, enable \"Cloud Vision API\" and \"Cloud Translation API\", then create an API key (optionally restricted to the iOS app com.hebslate.app). Google requires billing to be turned on for the project; its free tier currently covers about 1,000 frames and 500,000 translated characters a month, and a typical recording uses 10–40 frames. The key is stored in the iOS Keychain on this device only.")
+                if BuiltInKeys.google != nil {
+                    Text("A Google key is built into this app, so you can leave this empty. A key typed here replaces the built-in one.")
+                } else {
+                    Text("One key handles both reading and translating. In the Google Cloud console: create a project, enable \"Cloud Vision API\" and \"Cloud Translation API\", then create an API key (optionally restricted to the iOS app com.hebslate.app). Google requires billing to be turned on for the project; its free tier currently covers about 1,000 frames and 500,000 translated characters a month, and a typical recording uses 10–40 frames. The key is stored in the iOS Keychain on this device only.")
+                }
             }
 
             Section {

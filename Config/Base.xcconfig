@@ -1,0 +1,4 @@
+// Shared build settings. API keys live in Secrets.xcconfig, which is NOT
+// committed to git (see Secrets.example.xcconfig). The "?" makes the include
+// optional, so the project still builds when the file is missing.
+#include? "Secrets.xcconfig"

@@ -10,6 +10,10 @@ packages:
   HebslateCore:
     path: HebslateCore
 
+configFiles:
+  Debug: Config/Base.xcconfig
+  Release: Config/Base.xcconfig
+
 settings:
   base:
     SWIFT_VERSION: "5.0"
@@ -36,6 +40,9 @@ targets:
           - UIInterfaceOrientationPortrait
         NSPhotoLibraryUsageDescription: Hebslate opens the screen recordings you choose so it can translate the WhatsApp chat in them.
         ITSAppUsesNonExemptEncryption: false
+        # Filled from Config/Secrets.xcconfig at build time.
+        GoogleAPIKey: $(GOOGLE_API_KEY)
+        ClaudeAPIKey: $(CLAUDE_API_KEY)
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.hebslate.app

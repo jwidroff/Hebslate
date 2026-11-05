@@ -65,16 +65,33 @@ struct SettingsSnapshot: Sendable {
         if d.object(forKey: SettingsKey.chatTop) != nil { layout.chatTop = d.double(forKey: SettingsKey.chatTop) }
         if d.object(forKey: SettingsKey.chatBottom) != nil { layout.chatBottom = d.double(forKey: SettingsKey.chatBottom) }
         if d.object(forKey: SettingsKey.outgoingOnRight) != nil { layout.outgoingOnRight = d.bool(forKey: SettingsKey.outgoingOnRight) }
-        let key = KeychainStore.read(KeychainStore.claudeAPIKey)
-        let googleKey = KeychainStore.read(KeychainStore.googleAPIKey)
+        // A key typed in Settings overrides the one built into the app.
+        let key = nonEmpty(KeychainStore.read(KeychainStore.claudeAPIKey)) ?? BuiltInKeys.claude
+        let googleKey = nonEmpty(KeychainStore.read(KeychainStore.googleAPIKey)) ?? BuiltInKeys.google
         return SettingsSnapshot(
             reader: ReaderEngine(rawValue: d.string(forKey: SettingsKey.reader) ?? "") ?? .auto,
             translator: TranslatorEngine(rawValue: d.string(forKey: SettingsKey.translator) ?? "") ?? .auto,
             model: d.string(forKey: SettingsKey.model) ?? ClaudeModels.default,
-            apiKey: (key?.isEmpty ?? true) ? nil : key,
-            googleKey: (googleKey?.isEmpty ?? true) ? nil : googleKey,
+            apiKey: key,
+            googleKey: googleKey,
             keepFraction: d.object(forKey: SettingsKey.keepFraction) == nil ? 0.45 : d.double(forKey: SettingsKey.keepFraction),
             layout: layout
         )
     }
+}
+
+/// API keys compiled into the app from Config/Secrets.xcconfig (via Info.plist).
+enum BuiltInKeys {
+    static var google: String? { value("GoogleAPIKey") }
+    static var claude: String? { value("ClaudeAPIKey") }
+
+    private static func value(_ key: String) -> String? {
+        nonEmpty(Bundle.main.object(forInfoDictionaryKey: key) as? String)
+    }
+}
+
+private func nonEmpty(_ s: String?) -> String? {
+    guard let t = s?.trimmingCharacters(in: .whitespacesAndNewlines), !t.isEmpty,
+          !t.hasPrefix("$(") else { return nil }
+    return t
 }

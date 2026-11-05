@@ -98,7 +98,19 @@ At the time of writing, Apple's on-device engines don't handle Hebrew, so in pra
 1. Go to <https://console.cloud.google.com>, create a project and turn on billing. Google's free tier currently covers about 1,000 frames and 500,000 translated characters a month.
 2. Under **APIs & Services › Library**, enable **Cloud Vision API** and **Cloud Translation API**.
 3. Under **APIs & Services › Credentials**, choose **Create credentials › API key**. You can restrict the key to the iOS app `com.hebslate.app` and to those two APIs.
-4. Paste the key in Hebslate under **Settings › Google Cloud**. It is stored only in the iOS Keychain on this device.
+4. Build the key into the app (recommended for your own copy). In Terminal, run:
+
+   ```bash
+   cd ~/Documents/hebslate
+   cp Config/Secrets.example.xcconfig Config/Secrets.xcconfig
+   open -e Config/Secrets.xcconfig
+   ```
+
+   Paste your key after `GOOGLE_API_KEY = `, save, then run `xcodegen` and build again. `Config/Secrets.xcconfig` is git-ignored, so the key never goes to GitHub.
+
+   Alternatively, paste the key in the app under **Settings › Google Cloud**. A key entered there overrides the built-in one.
+
+> **If you ever share the app:** a key built into an app can be extracted from it. Restrict the key in the Google Cloud console (to the iOS app `com.hebslate.app` and to the two APIs) and set a budget alert. For an App Store release, move the keys to a small server (proxy) instead.
 
 To use Claude, create an API key at <https://console.anthropic.com>, then paste it in **Settings › Claude**. The key is stored only in the iOS Keychain on this device. Frames and text go to Anthropic only while a Claude engine is in use. The default model is Claude Opus 5.5. You can switch to Sonnet 5.5 or Haiku 5.5 for lower cost. Requests on Opus 5.5 and Sonnet 5.5 turn on server-side refusal fallbacks (`fallbacks: "default"`).
 
