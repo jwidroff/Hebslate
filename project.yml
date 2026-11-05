@@ -1,0 +1,57 @@
+# Generate the Xcode project with XcodeGen:  brew install xcodegen && xcodegen
+name: Hebslate
+options:
+  bundleIdPrefix: com.hebslate
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+
+packages:
+  HebslateCore:
+    path: HebslateCore
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+
+targets:
+  Hebslate:
+    type: application
+    platform: iOS
+    sources:
+      - path: App/Hebslate
+    dependencies:
+      - package: HebslateCore
+    info:
+      path: App/Hebslate/Info.plist
+      properties:
+        CFBundleDisplayName: Hebslate
+        LSRequiresIPhoneOS: true
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+        UIApplicationSupportsIndirectInputEvents: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        NSPhotoLibraryUsageDescription: Hebslate opens the screen recordings you choose so it can translate the WhatsApp chat in them.
+        ITSAppUsesNonExemptEncryption: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hebslate.app
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        CODE_SIGN_STYLE: Automatic
+        # Set your team here or in Xcode › Signing & Capabilities.
+        DEVELOPMENT_TEAM: ""
+
+schemes:
+  Hebslate:
+    build:
+      targets:
+        Hebslate: all
+    run:
+      config: Debug
+    archive:
+      config: Release
