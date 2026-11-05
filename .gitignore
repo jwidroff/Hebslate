@@ -6,3 +6,4 @@ xcuserdata/
 DerivedData/
 *.xcworkspace/
 !*.xcodeproj/project.xcworkspace/
+*.zip
