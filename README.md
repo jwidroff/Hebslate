@@ -97,6 +97,6 @@ Anyone who extracts the built app (device backup, `.ipa`, decompile) can read th
 ## Known limitations
 
 * Voice notes and stickers aren't transcribed — Cloud Vision only finds text, so these bubbles are skipped.
-* A photo bubble with Hebrew text baked into it (a meme, a screenshot) is shown as the original photo with each line's English translation in a white tag over the Hebrew. The photo's bounds are detected from pixel contrast around the text, so the crop can be a little off on busy or low-contrast photos. A plain photo with no text isn't shown at all.
+* A photo message (a meme, a screenshot, a plain photo) is shown as `[IMAGE HERE]` rather than translated — reading text out of a photo isn't reliable enough to show in place of the original.
 * The gray quoted preview in a reply is left out. Only the reply text is translated.
 * Cloud Translation has no conversation context, so slang, idioms and ambiguous pronouns translate less reliably than a context-aware model would.

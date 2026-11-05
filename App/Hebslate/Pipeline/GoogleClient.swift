@@ -115,38 +115,13 @@ struct GoogleClient {
 
     // MARK: - Translation (Cloud Translation v2)
 
-    /// Translations for a batch of messages: whole-bubble text for plain
-    /// messages, and one entry per overlay (index-aligned to
-    /// `ChatMessage.imageOverlays`) for image messages.
-    struct TranslationResult: Sendable {
-        var messages: [UUID: String] = [:]
-        var overlays: [UUID: [String]] = [:]
-    }
-
-    /// Translates `items` into English: each plain message's text, and each
-    /// image message's overlay texts individually (so an overlay's
-    /// translation is never a fragment split out of a merged string).
-    /// Returns no context to Google beyond the text itself (v2 is a bare
-    /// translation endpoint).
-    func translate(_ items: [ChatMessage]) async throws -> TranslationResult {
-        enum Target { case message(UUID), overlay(UUID, Int) }
-        var targets: [Target] = []
-        var texts: [String] = []
-        for item in items {
-            if item.imageOverlays.isEmpty {
-                let text = item.original.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !text.isEmpty else { continue }
-                targets.append(.message(item.id)); texts.append(item.original)
-            } else {
-                for (i, overlay) in item.imageOverlays.enumerated() {
-                    guard !overlay.original.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { continue }
-                    targets.append(.overlay(item.id, i)); texts.append(overlay.original)
-                }
-            }
-        }
-        guard !texts.isEmpty else { return TranslationResult() }
+    /// Translates `items`' original text into English. Returns no context to
+    /// Google beyond the text itself (v2 is a bare translation endpoint).
+    func translate(_ items: [ChatMessage]) async throws -> [UUID: String] {
+        let pending = items.filter { !$0.original.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        guard !pending.isEmpty else { return [:] }
         let body: [String: Any] = [
-            "q": texts,
+            "q": pending.map(\.original),
             "source": "iw",
             "target": "en",
             "format": "text",
@@ -157,20 +132,11 @@ struct GoogleClient {
               let translations = dataObj["translations"] as? [[String: Any]] else {
             throw GoogleError.badResponse("not JSON")
         }
-        var result = TranslationResult()
-        var overlayBuckets: [UUID: [Int: String]] = [:]
-        for (target, translation) in zip(targets, translations) {
-            guard let text = translation["translatedText"] as? String else { continue }
-            switch target {
-            case .message(let id): result.messages[id] = text
-            case .overlay(let id, let index): overlayBuckets[id, default: [:]][index] = text
-            }
+        var out: [UUID: String] = [:]
+        for (item, translation) in zip(pending, translations) {
+            if let text = translation["translatedText"] as? String { out[item.id] = text }
         }
-        for (id, bucket) in overlayBuckets {
-            let count = (bucket.keys.max() ?? -1) + 1
-            result.overlays[id] = (0..<count).map { bucket[$0] ?? "" }
-        }
-        return result
+        return out
     }
 
     // MARK: - HTTP

@@ -128,10 +128,7 @@ struct MessageRow: View {
                     .foregroundStyle(message.senderColor.map(Color.init) ?? ChatTheme.senderColor(sender))
             }
 
-            if message.isImage, let image = message.uiImage {
-                ImageWithOverlays(image: image, overlays: message.imageOverlays)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-            } else if let english = message.translation {
+            if let english = message.translation {
                 Text(decorated(english))
                     .foregroundStyle(ChatTheme.primaryText)
                     .textSelection(.enabled)
@@ -142,7 +139,7 @@ struct MessageRow: View {
                 }
             }
 
-            if showHebrew, !message.isImage, message.translation != nil {
+            if showHebrew, message.translation != nil {
                 Divider().opacity(0.4)
                 hebrew(message.original)
                     .font(.callout)
@@ -202,47 +199,3 @@ struct MessageRow: View {
     }
 }
 
-private extension ChatMessage {
-    var uiImage: UIImage? { imageData.flatMap(UIImage.init(data:)) }
-}
-
-/// A photo message with each translated line in a solid white tag, placed
-/// where the original Hebrew sat (`overlay.box`, normalized to the image).
-private struct ImageWithOverlays: View {
-    let image: UIImage
-    let overlays: [ImageOverlay]
-
-    var body: some View {
-        GeometryReader { geo in
-            ZStack(alignment: .topLeading) {
-                Image(uiImage: image).resizable().scaledToFit()
-                ForEach(Array(overlays.enumerated()), id: \.offset) { _, overlay in
-                    tag(for: overlay, in: geo.size)
-                }
-            }
-        }
-        .aspectRatio(image.size.width / max(image.size.height, 1), contentMode: .fit)
-        .frame(maxWidth: 260)
-    }
-
-    private func tag(for overlay: ImageOverlay, in size: CGSize) -> some View {
-        let width = overlay.box.width * size.width, height = overlay.box.height * size.height
-        return Group {
-            if let text = overlay.translation {
-                Text(text)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.black)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.4)
-                    .padding(.horizontal, 3)
-                    .padding(.vertical, 1)
-                    .frame(minWidth: width, minHeight: height)
-                    .background(Color.white)
-            } else {
-                ProgressView().controlSize(.mini).frame(width: width, height: height)
-            }
-        }
-        .position(x: (overlay.box.x + overlay.box.width / 2) * size.width,
-                  y: (overlay.box.y + overlay.box.height / 2) * size.height)
-    }
-}

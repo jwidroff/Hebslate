@@ -139,23 +139,6 @@ public struct ConversationStitcher: Sendable {
         }
     }
 
-    /// Replace per-overlay translations (by message id, then overlay index)
-    /// for image messages. Once every overlay of a message has a
-    /// translation, `translation` itself is set to their join, so sharing /
-    /// copying the transcript still has something to show for that bubble.
-    public mutating func applyOverlayTranslations(_ translations: [UUID: [String]]) {
-        for i in messages.indices {
-            guard let list = translations[messages[i].id] else { continue }
-            for j in messages[i].imageOverlays.indices where j < list.count {
-                messages[i].imageOverlays[j].translation = list[j]
-            }
-            if messages[i].translation == nil, !messages[i].imageOverlays.isEmpty,
-               messages[i].imageOverlays.allSatisfy({ $0.translation != nil }) {
-                messages[i].translation = messages[i].imageOverlays.compactMap(\.translation).joined(separator: "\n")
-            }
-        }
-    }
-
     public var untranslated: [ChatMessage] { messages.filter(\.needsTranslation) }
 
     /// Removes a message the user deleted (e.g. junk read from a non-chat frame).
@@ -300,8 +283,6 @@ public struct ConversationStitcher: Sendable {
                 a.translation = nil
                 a.cutOffTop = spliced.cutOffTop
                 a.cutOffBottom = spliced.cutOffBottom
-                a.imageData = f.imageData ?? a.imageData
-                if !f.imageOverlays.isEmpty { a.imageOverlays = f.imageOverlays }
                 if a.time == nil, let t = f.time { a.time = t }
                 if a.sender == nil, let s = f.sender { a.sender = s }
                 if a.senderColor == nil, let c = f.senderColor { a.senderColor = c }
@@ -332,10 +313,6 @@ public struct ConversationStitcher: Sendable {
             if a.cutOffTop != f.cutOffTop || a.cutOffBottom != f.cutOffBottom { changed = true }
             a.cutOffTop = f.cutOffTop
             a.cutOffBottom = f.cutOffBottom
-            // A fresh OCR pass over the same photo; take its crop and
-            // overlays wholesale rather than trying to merge them piecemeal.
-            a.imageData = f.imageData
-            a.imageOverlays = f.imageOverlays
         }
         if a.time == nil, let t = f.time { a.time = t; changed = true }
         if a.sender == nil, let s = f.sender { a.sender = s; changed = true }
