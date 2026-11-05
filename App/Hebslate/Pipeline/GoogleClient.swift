@@ -19,7 +19,7 @@ struct GoogleClient {
     var layout: LineGrouper.Layout
 
     private static let visionEndpoint = URL(string: "https://vision.googleapis.com/v1/images:annotate")!
-    private static let translateEndpoint = URL(string: "https://translation.googleapis.com/language/translate2")!
+    private static let translateEndpoint = URL(string: "https://translation.googleapis.com/language/translate/v2")!
 
     enum GoogleError: LocalizedError {
         case missingKey
@@ -54,9 +54,13 @@ struct GoogleClient {
         return BubbleLineAssembler(layout: layout).assemble(rawLines, frame: frame)
     }
 
-    /// Cloud Vision returns pixel-space polygons grouped as pages > blocks >
-    /// paragraphs > words > symbols. Each paragraph becomes one OCR line
-    /// (WhatsApp bubbles are usually one paragraph per visual line already).
+    /// Cloud Vision groups recognized text as pages > blocks > paragraphs >
+    /// words > symbols — but a paragraph can span several visual lines (a
+    /// wrapped WhatsApp bubble is usually one paragraph with `LINE_BREAK`
+    /// symbols inside it), unlike Apple Vision's one-observation-per-line
+    /// output. Split each paragraph back into per-line (text, box) pairs at
+    /// its `LINE_BREAK` symbols so `BubbleLineAssembler` sees the same
+    /// per-visual-line granularity either reader produces.
     private static func parseLines(_ data: Data) throws -> [(text: String, box: NormRect)] {
         guard let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               let responses = obj["responses"] as? [[String: Any]], let first = responses.first else {
@@ -77,34 +81,42 @@ struct GoogleClient {
         var lines: [(text: String, box: NormRect)] = []
         for block in (page["blocks"] as? [[String: Any]]) ?? [] {
             for paragraph in (block["paragraphs"] as? [[String: Any]]) ?? [] {
-                guard let box = boundingBox(paragraph["boundingBox"], width: width, height: height) else { continue }
-                let text = paragraphText(paragraph)
-                guard !text.isEmpty else { continue }
-                lines.append((text, box))
+                lines.append(contentsOf: visualLines(in: paragraph, width: width, height: height))
             }
         }
         return lines
     }
 
-    private static func paragraphText(_ paragraph: [String: Any]) -> String {
+    /// Walks a paragraph's symbols, starting a new line at each `LINE_BREAK`,
+    /// and computes each line's box from the union of its symbols' own boxes.
+    private static func visualLines(in paragraph: [String: Any], width: Double, height: Double) -> [(text: String, box: NormRect)] {
+        var result: [(text: String, box: NormRect)] = []
         var text = ""
+        var xs: [Double] = [], ys: [Double] = []
+
+        func flush() {
+            defer { text = ""; xs = []; ys = [] }
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty, let minX = xs.min(), let maxX = xs.max(), let minY = ys.min(), let maxY = ys.max() else { return }
+            result.append((trimmed, NormRect(x: minX / width, y: minY / height, width: (maxX - minX) / width, height: (maxY - minY) / height)))
+        }
+
         for word in (paragraph["words"] as? [[String: Any]]) ?? [] {
             for symbol in (word["symbols"] as? [[String: Any]]) ?? [] {
                 text += (symbol["text"] as? String) ?? ""
-                let breakType = (((symbol["property"] as? [String: Any])?["detectedBreak"] as? [String: Any])?["type"] as? String) ?? ""
-                if breakType == "SPACE" || breakType == "EOL_SURE_SPACE" { text += " " }
+                for v in ((symbol["boundingBox"] as? [String: Any])?["vertices"] as? [[String: Any]]) ?? [] {
+                    if let x = (v["x"] as? NSNumber)?.doubleValue { xs.append(x) }
+                    if let y = (v["y"] as? NSNumber)?.doubleValue { ys.append(y) }
+                }
+                switch (((symbol["property"] as? [String: Any])?["detectedBreak"] as? [String: Any])?["type"] as? String) ?? "" {
+                case "LINE_BREAK": flush()
+                case "SPACE", "EOL_SURE_SPACE": text += " "
+                default: break
+                }
             }
         }
-        return text.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private static func boundingBox(_ value: Any?, width: Double, height: Double) -> NormRect? {
-        guard let dict = value as? [String: Any],
-              let vertices = dict["vertices"] as? [[String: Any]], !vertices.isEmpty else { return nil }
-        let xs = vertices.map { ($0["x"] as? NSNumber)?.doubleValue ?? 0 }
-        let ys = vertices.map { ($0["y"] as? NSNumber)?.doubleValue ?? 0 }
-        guard let minX = xs.min(), let maxX = xs.max(), let minY = ys.min(), let maxY = ys.max() else { return nil }
-        return NormRect(x: minX / width, y: minY / height, width: (maxX - minX) / width, height: (maxY - minY) / height)
+        flush()
+        return result
     }
 
     // MARK: - Translation (Cloud Translation v2)
