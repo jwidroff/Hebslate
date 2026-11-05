@@ -1,16 +1,16 @@
 import CoreGraphics
 import Foundation
 import HebslateCore
+import ImageIO
+import UniformTypeIdentifiers
 
 /// Thin Google Cloud client, authenticated with a plain API key (no OAuth or
-/// service account needed). Used for two optional jobs, mirroring `ClaudeClient`:
+/// service account needed). Used for two jobs:
 ///  * `readFrame` — Cloud Vision's DOCUMENT_TEXT_DETECTION finds the text lines,
-///    which `BubbleLineAssembler` turns into messages using bubble colors, the
-///    same way `VisionReader` does with Apple Vision's output;
-///  * `translate` — Cloud Translation (v2) translates Hebrew to English.
-///    Unlike Claude, this is a bare machine-translation endpoint: it has no
-///    conversation context, so slang and ambiguous pronouns translate less
-///    reliably than with Claude.
+///    which `BubbleLineAssembler` turns into messages using bubble colors;
+///  * `translate` — Cloud Translation (v2) translates Hebrew to English. It is
+///    a bare machine-translation endpoint with no conversation context, so
+///    slang and ambiguous pronouns translate less reliably than a model would.
 ///
 /// The API key must have the Cloud Vision API and Cloud Translation API
 /// enabled in Google Cloud Console.
@@ -28,8 +28,8 @@ struct GoogleClient {
 
         var errorDescription: String? {
             switch self {
-            case .missingKey: "Add your Google Cloud API key in Settings to use Google."
-            case .http(403, let msg): "Google rejected the request (\(msg)). Check the API key and that the Cloud Vision and Cloud Translation APIs are enabled in Settings."
+            case .missingKey: "No Google Cloud API key is configured for this build."
+            case .http(403, let msg): "Google rejected the request (\(msg)). Check that the API key is valid and that the Cloud Vision and Cloud Translation APIs are enabled for it."
             case .http(let code, let msg): "Google API error \(code): \(msg)"
             case .badResponse(let s): "Unexpected response from Google: \(s)"
             }
@@ -39,7 +39,7 @@ struct GoogleClient {
     // MARK: - Frame reading (Cloud Vision)
 
     func readFrame(_ frame: KeyFrame) async throws -> FrameReading {
-        guard let jpeg = ClaudeClient.jpegData(frame.image, maxHeight: 1600) else {
+        guard let jpeg = Self.jpegData(frame.image, maxHeight: 1600) else {
             throw GoogleError.badResponse("could not encode frame")
         }
         let body: [String: Any] = [
@@ -183,5 +183,27 @@ struct GoogleClient {
             return msg
         }
         return String(data: data, encoding: .utf8) ?? "unknown error"
+    }
+
+    // MARK: - Image encoding
+
+    static func jpegData(_ image: CGImage, maxHeight: Int) -> Data? {
+        var source = image
+        if image.height > maxHeight {
+            let scale = Double(maxHeight) / Double(image.height)
+            let w = Int(Double(image.width) * scale), h = maxHeight
+            guard let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
+                                      space: CGColorSpaceCreateDeviceRGB(),
+                                      bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue) else { return nil }
+            ctx.interpolationQuality = .high
+            ctx.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
+            guard let scaled = ctx.makeImage() else { return nil }
+            source = scaled
+        }
+        let data = NSMutableData()
+        guard let dest = CGImageDestinationCreateWithData(data as CFMutableData, UTType.jpeg.identifier as CFString, 1, nil) else { return nil }
+        CGImageDestinationAddImage(dest, source, [kCGImageDestinationLossyCompressionQuality: 0.8] as CFDictionary)
+        guard CGImageDestinationFinalize(dest) else { return nil }
+        return data as Data
     }
 }

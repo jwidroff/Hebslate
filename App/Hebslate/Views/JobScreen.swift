@@ -1,26 +1,15 @@
 import HebslateCore
 import SwiftUI
-import Translation
 
 /// Shows the conversation being rebuilt live while the recording is processed.
 struct JobScreen: View {
     let job: TranslationJob
-    @State private var appleConfig: TranslationSession.Configuration?
     @State private var noticeDismissed = false
 
     var body: some View {
         ConversationView(conversation: job.conversation,
                          onDelete: job.phase == .finished ? { (m: ChatMessage) in job.delete(m) } : nil)
             .safeAreaInset(edge: .top, spacing: 0) { banner }
-            .translationTask(appleConfig) { session in
-                await job.translateWithApple(session)
-            }
-            .onChange(of: job.phase, initial: true) { _, phase in
-                if phase == .awaitingAppleTranslation && appleConfig == nil {
-                    appleConfig = TranslationSession.Configuration(source: Locale.Language(identifier: "he"),
-                                                                   target: Locale.Language(identifier: "en"))
-                }
-            }
             .onAppear { job.start() }
             .onDisappear { if job.phase.isRunning { job.cancel() } }
     }
@@ -36,8 +25,6 @@ struct JobScreen: View {
         case .translating(let done, let total):
             StatusBanner(title: "Translating \(total) new lines…",
                          progress: total == 0 ? nil : Double(done) / Double(total), onCancel: job.cancel)
-        case .awaitingAppleTranslation:
-            StatusBanner(title: "Preparing Apple Translate…", progress: nil, onCancel: job.cancel)
         case .failed(let message):
             StatusBanner(title: message, isError: true)
         case .finished:

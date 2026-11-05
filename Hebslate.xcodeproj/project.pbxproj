@@ -8,13 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		000000000000000000100002 /* HebslateApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000100001 /* HebslateApp.swift */; };
-		000000000000000000100004 /* ClaudeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000100003 /* ClaudeClient.swift */; };
 		000000000000000000100006 /* FrameExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000100005 /* FrameExtractor.swift */; };
 		000000000000000000100008 /* TranslationJob.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000100007 /* TranslationJob.swift */; };
-		00000000000000000010000A /* VisionReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000100009 /* VisionReader.swift */; };
 		00000000000000000010000C /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000010000B /* AppSettings.swift */; };
 		00000000000000000010000E /* ConversationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000010000D /* ConversationStore.swift */; };
-		000000000000000000100010 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000010000F /* KeychainStore.swift */; };
 		000000000000000000100012 /* ConversationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000100011 /* ConversationView.swift */; };
 		000000000000000000100014 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000100013 /* HomeView.swift */; };
 		000000000000000000100016 /* JobScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000100015 /* JobScreen.swift */; };
@@ -29,13 +26,10 @@
 
 /* Begin PBXFileReference section */
 		000000000000000000100001 /* HebslateApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HebslateApp.swift; sourceTree = "<group>"; };
-		000000000000000000100003 /* ClaudeClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeClient.swift; sourceTree = "<group>"; };
 		000000000000000000100005 /* FrameExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameExtractor.swift; sourceTree = "<group>"; };
 		000000000000000000100007 /* TranslationJob.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationJob.swift; sourceTree = "<group>"; };
-		000000000000000000100009 /* VisionReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionReader.swift; sourceTree = "<group>"; };
 		00000000000000000010000B /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		00000000000000000010000D /* ConversationStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationStore.swift; sourceTree = "<group>"; };
-		00000000000000000010000F /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
 		000000000000000000100011 /* ConversationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationView.swift; sourceTree = "<group>"; };
 		000000000000000000100013 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		000000000000000000100015 /* JobScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobScreen.swift; sourceTree = "<group>"; };
@@ -93,11 +87,9 @@
 			isa = PBXGroup;
 			children = (
 				80A25116B7127F5C2FAEEBFE /* BubbleLineAssembler.swift */,
-				000000000000000000100003 /* ClaudeClient.swift */,
 				000000000000000000100005 /* FrameExtractor.swift */,
 				B15B0A5BCD2B69E39521C1E0 /* GoogleClient.swift */,
 				000000000000000000100007 /* TranslationJob.swift */,
-				000000000000000000100009 /* VisionReader.swift */,
 			);
 			path = Pipeline;
 			sourceTree = "<group>";
@@ -108,7 +100,6 @@
 				00000000000000000010000B /* AppSettings.swift */,
 				00000000000000000010000D /* ConversationStore.swift */,
 				8A1A871D5DF30C0618B150A1 /* DefaultAPIKeys.swift */,
-				00000000000000000010000F /* KeychainStore.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -205,15 +196,12 @@
 			files = (
 				000000000000000000100002 /* HebslateApp.swift in Sources */,
 				2CD3C3D26C5835C0D824BD44 /* BubbleLineAssembler.swift in Sources */,
-				000000000000000000100004 /* ClaudeClient.swift in Sources */,
 				000000000000000000100006 /* FrameExtractor.swift in Sources */,
 				D6F1202CD18FA812C55BEFFB /* GoogleClient.swift in Sources */,
 				000000000000000000100008 /* TranslationJob.swift in Sources */,
-				00000000000000000010000A /* VisionReader.swift in Sources */,
 				00000000000000000010000C /* AppSettings.swift in Sources */,
 				00000000000000000010000E /* ConversationStore.swift in Sources */,
 				EC70CD9F9A7AAFE461A65FFF /* DefaultAPIKeys.swift in Sources */,
-				000000000000000000100010 /* KeychainStore.swift in Sources */,
 				000000000000000000100012 /* ConversationView.swift in Sources */,
 				000000000000000000100014 /* HomeView.swift in Sources */,
 				000000000000000000100016 /* JobScreen.swift in Sources */,

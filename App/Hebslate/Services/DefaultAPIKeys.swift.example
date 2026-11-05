@@ -1,13 +1,12 @@
 import Foundation
 
-/// Optional keys baked into this build, used only when nothing is set in
-/// Settings. Copy this file to `DefaultAPIKeys.swift` (gitignored — never
-/// commit your real keys) and fill in whichever you want pre-filled.
+/// The Google Cloud API key baked into this build. Copy this file to
+/// `DefaultAPIKeys.swift` (gitignored — never commit your real key) and fill
+/// it in; there is no Settings UI to enter one at runtime.
 ///
 /// Baking a key into the binary means anyone who extracts this app (from a
 /// device backup, an .ipa, a decompile) can read it out and run up charges
 /// on your account. Only do this for a personal build you won't distribute.
 enum DefaultAPIKeys {
-    static let claude: String? = nil
     static let google: String? = nil
 }

@@ -12,10 +12,9 @@ screen recording
    │  scrolls about half a screen (row-profile scroll estimation), so frames overlap
    ▼
 key frames
-   │  Reader (one per frame), either:
-   │   • VisionReader – on-device Apple Vision OCR, plus bubble-color sampling
-   │     (green = me, white/gray = them, centered pill = date or system)
-   │   • Claude – vision model returns structured JSON for each bubble
+   │  GoogleClient: Cloud Vision (DOCUMENT_TEXT_DETECTION) finds the text lines;
+   │  bubble-color sampling (green = me, white/gray = them, centered pill = date
+   │  or system) turns them into bubbles
    ▼
 FrameReading [side, text, time, sender, cut-off-top/bottom] per bubble
    │  ConversationStitcher: fuzzy-aligns each frame against the chat so far,
@@ -24,9 +23,8 @@ FrameReading [side, text, time, sender, cut-off-top/bottom] per bubble
    │  "messages may be missing" marker when two frames don't overlap
    ▼
 de-duplicated conversation
-   │  Only messages with no translation yet are sent to the translator:
-   │   • Claude – batches of 40 with the earlier messages as context
-   │   • Apple Translate – fully on-device (Translation framework)
+   │  Only messages with no translation yet are sent to Cloud Translation (v2),
+   │  in batches of 40
    ▼
 ConversationView: a scrollable WhatsApp-style chat in English
 ```
@@ -52,9 +50,9 @@ HebslateCore/                 Swift package: platform-independent logic + unit t
     ScrollEstimator.swift     scroll-distance estimation for picking key frames
   Tests/HebslateCoreTests/
 App/Hebslate/                 iOS app (SwiftUI, iOS 18+)
-  Pipeline/                   FrameExtractor, VisionReader, ClaudeClient, TranslationJob
+  Pipeline/                   FrameExtractor, GoogleClient, BubbleLineAssembler, TranslationJob
   Views/                      Home, live job screen, WhatsApp-style chat, settings
-  Services/                   settings, Keychain, conversation storage
+  Services/                   settings, conversation storage, default API key
 project.yml                   XcodeGen project spec
 ```
 
@@ -76,30 +74,27 @@ To run the core unit tests:
 cd HebslateCore && swift test
 ```
 
-## Engines and privacy
+## Engine and privacy
 
-The **Settings** screen shows which engines this iPhone supports.
+Hebslate reads and translates every recording with Google Cloud: Cloud Vision (`DOCUMENT_TEXT_DETECTION`) finds the text lines, and Cloud Translation (v2) translates each message on its own (it has no conversation context, so slang and ambiguous pronouns translate less reliably than a model with full context would).
 
-| Step      | On-device (free, private)                                                                                  | Claude (cloud, needs an API key)                                    | Google Cloud (cloud, needs an API key) |
-|-----------|-------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------|------------------------------------------|
-| Read text | Apple Vision, when this iOS version supports Hebrew text recognition (checked at runtime)                  | Claude reads each key frame and returns bubbles as JSON              | Cloud Vision (DOCUMENT_TEXT_DETECTION) finds the text lines; the same bubble-color heuristics used on-device turn them into messages |
-| Translate | Apple Translate, when the Hebrew → English pair is available (the language pack downloads on first use)    | Claude translates with the conversation as context, so slang and abbreviations come out better | Cloud Translation (v2) translates each message on its own, with no conversation context |
+There is no API key field in the app. The Google Cloud API key is baked into the build at compile time:
 
-**Automatic**, the default, reads on-device when possible, otherwise Claude if a key is set, otherwise Google if a key is set. It translates with Claude when a key is set, otherwise Apple Translate on-device when supported, otherwise Google.
+1. Create an API key in Google Cloud Console with the **Cloud Vision API** and **Cloud Translation API** enabled.
+2. Copy `App/Hebslate/Services/DefaultAPIKeys.swift.example` to `App/Hebslate/Services/DefaultAPIKeys.swift` (gitignored) and fill in the key.
+3. Build and run. Every recording on that build uses this key; frames and text go to Google only.
 
-To use Claude, create an API key at <https://console.anthropic.com>, then paste it in **Settings › Claude**. The key is stored only in the iOS Keychain on this device. Frames and text go to Anthropic only while a Claude engine is in use. The default model is Claude Opus 5.5. You can switch to Sonnet 5.5 or Haiku 5.5 for lower cost. Requests on Opus 5.5 and Sonnet 5.5 turn on server-side refusal fallbacks (`fallbacks: "default"`).
-
-To use Google, create an API key in Google Cloud Console with the **Cloud Vision API** and **Cloud Translation API** enabled, then paste it in **Settings › Google Cloud**. The key is stored only in the iOS Keychain on this device. Frames and text go to Google only while a Google engine is in use.
+Anyone who extracts the built app (device backup, `.ipa`, decompile) can read the key back out, so only bake in a key for a personal build you won't distribute.
 
 ## Recording tips
 
 * Scroll **slowly and steadily**. If a fling skips past content, Hebslate marks the spot with a yellow "messages may be missing" pill.
 * You can scroll up or down. Hebslate works out the direction.
 * Keep the chat full-screen and the keyboard closed.
-* If the on-device reader picks up the contact header or the typing bar as messages, adjust **Settings › WhatsApp layout**.
+* If reading picks up the contact header or the typing bar as messages, adjust **Settings › WhatsApp layout**.
 
 ## Known limitations
 
-* Voice notes, photos and stickers come through as placeholders like `[Photo]` with the Claude reader. The on-device reader skips them because they contain no text.
+* Voice notes, photos and stickers aren't transcribed — Cloud Vision only finds text, so these bubbles are skipped.
 * The gray quoted preview in a reply is left out. Only the reply text is translated.
-* In group chats, sender names are picked up by the Claude reader only.
+* Cloud Translation has no conversation context, so slang, idioms and ambiguous pronouns translate less reliably than a context-aware model would.

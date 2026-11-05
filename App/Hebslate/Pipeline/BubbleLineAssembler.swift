@@ -2,11 +2,9 @@ import CoreGraphics
 import Foundation
 import HebslateCore
 
-/// Turns raw OCR lines (text + normalized box) from any text-recognition
-/// engine into a `FrameReading`, using the pixel colors around each line to
-/// tell bubbles apart. Shared by `VisionReader` (on-device) and `GoogleClient`
-/// (Google Cloud Vision) — the two readers differ only in how they get from a
-/// frame to a list of (text, box) pairs.
+/// Turns raw OCR lines (text + normalized box) from Cloud Vision into a
+/// `FrameReading`, using the pixel colors around each line to tell bubbles
+/// apart.
 struct BubbleLineAssembler {
     var layout: LineGrouper.Layout
 
