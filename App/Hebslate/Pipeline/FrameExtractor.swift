@@ -14,8 +14,11 @@ struct KeyFrame: @unchecked Sendable {
 /// consecutive kept frames still overlap and can be stitched), or when the
 /// picture jumps.
 struct FrameExtractor {
-    /// How often the video is sampled before filtering.
-    var sampleInterval: Double = 0.2
+    /// How often the video is sampled before filtering. Kept short so a fast
+    /// scroll never moves more than a fraction of the chat height between two
+    /// raw samples — otherwise the scroll estimate can't measure it and that
+    /// content never appears in any frame at all.
+    var sampleInterval: Double = 0.1
     var keepFraction: Double = 0.45
     var layout: LineGrouper.Layout = .init()
 

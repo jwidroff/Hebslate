@@ -48,7 +48,6 @@ public enum ScrollEstimator {
         public var jumpError: Double
         private var lastKeptProfile: [Double]?
         private var previousProfile: [Double]?
-        private var accumulated = 0
 
         public init(keepFraction: Double = 0.45, jumpError: Double = 18) {
             self.keepFraction = keepFraction
@@ -57,15 +56,23 @@ public enum ScrollEstimator {
 
         public mutating func shouldKeep(_ profile: [Double], isLast: Bool = false) -> Bool {
             defer { previousProfile = profile }
-            guard let prev = previousProfile, lastKeptProfile != nil else {
+            guard let anchor = lastKeptProfile, let prev = previousProfile else {
                 lastKeptProfile = profile
                 return true
             }
-            let step = ScrollEstimator.estimate(previous: prev, current: profile)
-            accumulated += abs(step.shift)
+            // How far content has moved since the last kept frame, measured
+            // directly against that frame's own profile — not accumulated
+            // from many small steps — so there's no drift and no guessing
+            // about which raw sample marks "a full screen of new content."
+            // The next kept frame starts right at that measured point, with
+            // only a small overlap left for the stitcher to align on.
+            let sinceAnchor = ScrollEstimator.estimate(previous: anchor, current: profile)
+            // A fling or scene change is still judged frame-to-frame: nearby
+            // raw samples that suddenly stop correlating, independent of how
+            // far the anchor comparison above thinks things have moved.
+            let stepError = ScrollEstimator.estimate(previous: prev, current: profile).error
             let needed = Int(Double(profile.count) * keepFraction)
-            if accumulated >= needed || step.error > jumpError || (isLast && accumulated > 0) {
-                accumulated = 0
+            if abs(sinceAnchor.shift) >= needed || stepError > jumpError || (isLast && abs(sinceAnchor.shift) > 0) {
                 lastKeptProfile = profile
                 return true
             }
