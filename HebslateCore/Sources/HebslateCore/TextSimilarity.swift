@@ -107,4 +107,29 @@ public enum TextSimilarity {
         }
         return best * reliability
     }
+
+    /// Splices two partial readings of the same bubble together, for when a
+    /// single bubble is taller than one frame and two frames each only
+    /// caught part of it. `head` is expected to come textually first,
+    /// `tail` second, with some shared lines where the frames overlapped
+    /// (frames are designed to overlap, so this should normally find some).
+    /// Returns the merge and whether an actual overlap was found; with none,
+    /// the fragments are still joined rather than losing either one.
+    public static func mergeFragments(_ head: String, _ tail: String) -> (merged: String, overlapped: Bool) {
+        let headLines = head.components(separatedBy: "\n")
+        let tailLines = tail.components(separatedBy: "\n")
+        guard !headLines.isEmpty else { return (tail, false) }
+        guard !tailLines.isEmpty else { return (head, false) }
+
+        let maxK = Swift.min(headLines.count, tailLines.count)
+        for k in stride(from: maxK, through: 1, by: -1) {
+            var allMatch = true
+            for i in 0..<k where ratio(headLines[headLines.count - k + i], tailLines[i]) < 0.6 {
+                allMatch = false
+                break
+            }
+            if allMatch { return ((headLines + tailLines.dropFirst(k)).joined(separator: "\n"), true) }
+        }
+        return (head + "\n" + tail, false)
+    }
 }

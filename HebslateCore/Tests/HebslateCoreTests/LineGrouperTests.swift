@@ -51,6 +51,21 @@ final class LineGrouperTests: XCTestCase {
         XCTAssertEqual(msgs.map(\.text), ["שלום"])
     }
 
+    func testTallBubbleCutOffAtTopAssumesOneMessage() {
+        // A bubble big enough that only its lower portion fits in frame: the
+        // first line sits right at the top of the chat area (cut off), and
+        // the next line is far enough below it that the usual gap heuristic
+        // would otherwise treat it as a new bubble.
+        let lines = [
+            line("line one cut off at top", x: 0.05, y: 0.118, color: white),
+            line("much further down, same bubble", x: 0.05, y: 0.4, color: white),
+        ]
+        let (_, msgs, _) = LineGrouper().group(lines)
+        XCTAssertEqual(msgs.count, 1)
+        XCTAssertEqual(msgs[0].text, "line one cut off at top\nmuch further down, same bubble")
+        XCTAssertTrue(msgs[0].cutOffTop)
+    }
+
     func testCutOffFlags() {
         let lines = [
             line("סוף של הודעה ארוכה", x: 0.05, y: 0.118, color: white),

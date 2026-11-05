@@ -39,6 +39,10 @@ public struct FrameMessage: Codable, Sendable, Hashable {
     public var side: MessageSide
     public var text: String
     public var sender: String?
+    /// The sender name's own text color, as rendered in the chat (not the
+    /// bubble background), sampled so the app can show the name in the same
+    /// color instead of inventing one.
+    public var senderColor: RGB?
     public var time: String?
     public var cutOffTop: Bool
     public var cutOffBottom: Bool
@@ -48,6 +52,7 @@ public struct FrameMessage: Codable, Sendable, Hashable {
     public init(side: MessageSide,
                 text: String,
                 sender: String? = nil,
+                senderColor: RGB? = nil,
                 time: String? = nil,
                 cutOffTop: Bool = false,
                 cutOffBottom: Bool = false,
@@ -56,6 +61,7 @@ public struct FrameMessage: Codable, Sendable, Hashable {
         self.side = side
         self.text = text
         self.sender = sender
+        self.senderColor = senderColor
         self.time = time
         self.cutOffTop = cutOffTop
         self.cutOffBottom = cutOffBottom
@@ -91,6 +97,9 @@ public struct ChatMessage: Codable, Sendable, Identifiable, Hashable {
     /// `original` is replaced by a more complete reading.
     public var translation: String?
     public var sender: String?
+    /// The sender name's own text color, sampled from the chat; see
+    /// `FrameMessage.senderColor`.
+    public var senderColor: RGB?
     public var time: String?
     /// True while we have only seen a cut-off part of this bubble
     /// (top of the bubble was above the visible area / bottom below it).
@@ -109,6 +118,7 @@ public struct ChatMessage: Codable, Sendable, Identifiable, Hashable {
                 original: String,
                 translation: String? = nil,
                 sender: String? = nil,
+                senderColor: RGB? = nil,
                 time: String? = nil,
                 cutOffTop: Bool = false,
                 cutOffBottom: Bool = false,
@@ -120,6 +130,7 @@ public struct ChatMessage: Codable, Sendable, Identifiable, Hashable {
         self.original = original
         self.translation = translation
         self.sender = sender
+        self.senderColor = senderColor
         self.time = time
         self.cutOffTop = cutOffTop
         self.cutOffBottom = cutOffBottom
@@ -129,7 +140,7 @@ public struct ChatMessage: Codable, Sendable, Identifiable, Hashable {
     }
 
     public init(_ m: FrameMessage) {
-        self.init(side: m.side, original: m.text, sender: m.sender, time: m.time,
+        self.init(side: m.side, original: m.text, sender: m.sender, senderColor: m.senderColor, time: m.time,
                   cutOffTop: m.cutOffTop, cutOffBottom: m.cutOffBottom,
                   imageData: m.imageData, imageOverlays: m.imageOverlays)
     }

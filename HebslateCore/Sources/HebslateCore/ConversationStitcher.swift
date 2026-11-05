@@ -276,6 +276,40 @@ public struct ConversationStitcher: Sendable {
         var changed = false
         let aLen = TextSimilarity.normalize(a.original).count
 
+        // A bubble too tall for one frame: both readings are partial and cut
+        // off on opposite ends, so splice their text together (by their
+        // overlapping lines) instead of keeping whichever happens to be
+        // longer and losing the rest.
+        if a.isPartial, f.isPartial, a.side == f.side, a.original != f.text {
+            let forward = TextSimilarity.mergeFragments(a.original, f.text)   // a, then f
+            let backward = TextSimilarity.mergeFragments(f.text, a.original)  // f, then a
+            let spliced: (text: String, cutOffTop: Bool, cutOffBottom: Bool)?
+            switch (forward.overlapped, backward.overlapped) {
+            case (true, false):
+                spliced = (forward.merged, a.cutOffTop, f.cutOffBottom)
+            case (false, true):
+                spliced = (backward.merged, f.cutOffTop, a.cutOffBottom)
+            case (true, true):
+                spliced = direction < 0 ? (backward.merged, f.cutOffTop, a.cutOffBottom)
+                                        : (forward.merged, a.cutOffTop, f.cutOffBottom)
+            case (false, false):
+                spliced = nil
+            }
+            if let spliced, spliced.text != a.original {
+                a.original = spliced.text
+                a.translation = nil
+                a.cutOffTop = spliced.cutOffTop
+                a.cutOffBottom = spliced.cutOffBottom
+                a.imageData = f.imageData ?? a.imageData
+                if !f.imageOverlays.isEmpty { a.imageOverlays = f.imageOverlays }
+                if a.time == nil, let t = f.time { a.time = t }
+                if a.sender == nil, let s = f.sender { a.sender = s }
+                if a.senderColor == nil, let c = f.senderColor { a.senderColor = c }
+                messages[index] = a
+                return true
+            }
+        }
+
         let replace: Bool
         switch (a.isPartial, f.isPartial) {
         case (true, false):
@@ -305,6 +339,7 @@ public struct ConversationStitcher: Sendable {
         }
         if a.time == nil, let t = f.time { a.time = t; changed = true }
         if a.sender == nil, let s = f.sender { a.sender = s; changed = true }
+        if a.senderColor == nil, let c = f.senderColor { a.senderColor = c; changed = true }
 
         messages[index] = a
         return changed

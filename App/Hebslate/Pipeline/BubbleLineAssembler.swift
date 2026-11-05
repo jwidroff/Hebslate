@@ -37,10 +37,74 @@ struct BubbleLineAssembler {
 
         let (name, messages, groups) = LineGrouper(layout: layout).group(lines)
         let finalMessages = zip(messages, groups).map { message, group -> FrameMessage in
-            guard let bitmap, message.side != .system, looksLikeImage(group) else { return message }
+            var message = message
+            var group = group
+            if let bitmap, let sender = detectSender(message: message, group: group, bitmap: bitmap) {
+                message.sender = sender.name
+                message.senderColor = sender.color
+                message.text = sender.bodyText
+                group = Array(group.dropFirst())
+            }
+            guard let bitmap, message.side != .system, !group.isEmpty, looksLikeImage(group) else { return message }
             return attachImage(to: message, group: group, bitmap: bitmap, image: frame.image)
         }
         return FrameReading(frameIndex: frame.index, timestamp: frame.time, contactName: name, messages: finalMessages)
+    }
+
+    // MARK: - Sender names (group chats)
+
+    /// In a group chat, WhatsApp prints the sender's name above an incoming
+    /// bubble's text, in a color distinct from the message body. Cloud
+    /// Vision normally reports it as its own paragraph (the color change
+    /// starts a new one), so it shows up as the group's first line.
+    private func detectSender(message: FrameMessage, group: [OCRLine], bitmap: Bitmap) -> (name: String, color: RGB?, bodyText: String)? {
+        guard message.side == .incoming, group.count > 1, let first = group.first,
+              !LineGrouper.isTimeOnly(first.text) else { return nil }
+        let name = first.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty, !name.contains("\n"), name.count <= 40 else { return nil }
+
+        let rest = Array(group.dropFirst())
+        let body = bodyText(rest)
+        guard !body.isEmpty else { return nil }
+
+        guard let nameColor = textColor(in: first.box, background: first.bubbleColor, in: bitmap),
+              let bodyColor = rest.lazy.compactMap({ textColor(in: $0.box, background: $0.bubbleColor, in: bitmap) }).first,
+              nameColor.distance(to: bodyColor) > 40 else { return nil }
+
+        return (name, nameColor, body)
+    }
+
+    /// Re-joins OCR lines into message text the same way `LineGrouper`
+    /// does (strip a trailing time stamp off the last line), for use after
+    /// peeling a detected sender-name line off the front of a group.
+    private func bodyText(_ lines: [OCRLine]) -> String {
+        var texts = lines.map { $0.text.trimmingCharacters(in: .whitespacesAndNewlines) }
+        if let last = texts.last {
+            let (stripped, _) = LineGrouper.extractTime(from: last)
+            if stripped.isEmpty { texts.removeLast() } else { texts[texts.count - 1] = stripped }
+        }
+        return texts.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Estimates the color of the glyphs themselves (not the bubble behind
+    /// them) by sampling a grid inside the line's box, discarding samples
+    /// close to the background, and taking the median of what's left by
+    /// luminance (more resistant to anti-aliased edge pixels than a mean).
+    private func textColor(in box: NormRect, background: RGB?, in bitmap: Bitmap) -> RGB? {
+        var ink: [RGB] = []
+        let cols = 14, rows = 5
+        for r in 0...rows {
+            for c in 0...cols {
+                let x = box.minX + box.width * Double(c) / Double(cols)
+                let y = box.minY + box.height * Double(r) / Double(rows)
+                guard let color = bitmap.color(x: x, y: y) else { continue }
+                if let background, color.distance(to: background) < 45 { continue }
+                ink.append(color)
+            }
+        }
+        guard ink.count >= 3 else { return nil }
+        let sorted = ink.sorted { $0.r + $0.g + $0.b < $1.r + $1.g + $1.b }
+        return sorted[sorted.count / 2]
     }
 
     // MARK: - Image bubbles

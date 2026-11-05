@@ -116,9 +116,19 @@ public struct LineGrouper: Sendable {
                 let lineHeight = Swift.max(prev.box.height, line.box.height)
                 let gap = line.box.minY - prev.box.maxY
                 let horizontalOverlap = Swift.min(prev.box.maxX, line.box.maxX) - Swift.max(prev.box.minX, line.box.minX)
+                // The run being built already started cut off at the top of
+                // the visible chat area, so we never saw this bubble's own
+                // top edge — there's no reliable way to tell from geometry
+                // alone whether it's one bubble too tall for the frame or
+                // several. Without a definite pixel scan either way, assume
+                // it's the same bubble rather than risk splitting one
+                // message that simply didn't fit.
+                let unknownBubbleBounds = (current.first?.box.minY ?? line.box.minY) - layout.chatTop < layout.edgeMargin
                 let sameBubble: Bool
                 if let scanned = line.sameBubbleAsPrevious {
                     sameBubble = scanned
+                } else if unknownBubbleBounds {
+                    sameBubble = true
                 } else {
                     sameBubble = gap < lineHeight * 0.75 && horizontalOverlap > -0.05
                 }

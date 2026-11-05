@@ -24,6 +24,20 @@ final class TextSimilarityTests: XCTestCase {
         XCTAssertLessThan(TextSimilarity.fragmentRatio(end, in: full, position: .prefix), 0.6)
         XCTAssertGreaterThan(TextSimilarity.fragmentRatio(TextSimilarity.normalize("להביא את הספר"), in: full, position: .anywhere), 0.9)
     }
+
+    func testMergeFragmentsSplicesOverlappingLines() {
+        let head = "first line\nsecond line\nshared line"
+        let tail = "shared line\nnew line from next frame"
+        let result = TextSimilarity.mergeFragments(head, tail)
+        XCTAssertTrue(result.overlapped)
+        XCTAssertEqual(result.merged, "first line\nsecond line\nshared line\nnew line from next frame")
+    }
+
+    func testMergeFragmentsWithNoOverlapStillJoinsBoth() {
+        let result = TextSimilarity.mergeFragments("alpha", "omega")
+        XCTAssertFalse(result.overlapped)
+        XCTAssertEqual(result.merged, "alpha\nomega")
+    }
 }
 
 final class ScrollEstimatorTests: XCTestCase {

@@ -22,6 +22,10 @@ enum ChatTheme {
 }
 
 extension Color {
+    init(_ rgb: RGB) {
+        self.init(red: rgb.r / 255, green: rgb.g / 255, blue: rgb.b / 255)
+    }
+
     init(hex: UInt32) {
         self.init(red: Double((hex >> 16) & 0xFF) / 255, green: Double((hex >> 8) & 0xFF) / 255, blue: Double(hex & 0xFF) / 255)
     }
@@ -121,7 +125,7 @@ struct MessageRow: View {
             if isGroupChat, !isOutgoing, isFirstInRun, let sender = message.sender {
                 Text(sender)
                     .font(.footnote.weight(.semibold))
-                    .foregroundStyle(ChatTheme.senderColor(sender))
+                    .foregroundStyle(message.senderColor.map(Color.init) ?? ChatTheme.senderColor(sender))
             }
 
             if message.isImage, let image = message.uiImage {
