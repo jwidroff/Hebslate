@@ -21,6 +21,8 @@
 		000000000000000000100018 /* MessageBubble.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000100017 /* MessageBubble.swift */; };
 		00000000000000000010001A /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000100019 /* SettingsView.swift */; };
 		00000000000000000010001C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 00000000000000000010001B /* Assets.xcassets */; };
+		2CD3C3D26C5835C0D824BD44 /* BubbleLineAssembler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80A25116B7127F5C2FAEEBFE /* BubbleLineAssembler.swift */; };
+		D6F1202CD18FA812C55BEFFB /* GoogleClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B15B0A5BCD2B69E39521C1E0 /* GoogleClient.swift */; };
 		BAD02631309C9207004ED7A2 /* HebslateCore in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000100020 /* HebslateCore */; };
 /* End PBXBuildFile section */
 
@@ -39,6 +41,8 @@
 		000000000000000000100017 /* MessageBubble.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBubble.swift; sourceTree = "<group>"; };
 		000000000000000000100019 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		00000000000000000010001B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		80A25116B7127F5C2FAEEBFE /* BubbleLineAssembler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BubbleLineAssembler.swift; sourceTree = "<group>"; };
+		B15B0A5BCD2B69E39521C1E0 /* GoogleClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleClient.swift; sourceTree = "<group>"; };
 		00000000000000000010001D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		00000000000000000010001E /* Hebslate.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hebslate.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -86,8 +90,10 @@
 		000000000000000000100025 /* Pipeline */ = {
 			isa = PBXGroup;
 			children = (
+				80A25116B7127F5C2FAEEBFE /* BubbleLineAssembler.swift */,
 				000000000000000000100003 /* ClaudeClient.swift */,
 				000000000000000000100005 /* FrameExtractor.swift */,
+				B15B0A5BCD2B69E39521C1E0 /* GoogleClient.swift */,
 				000000000000000000100007 /* TranslationJob.swift */,
 				000000000000000000100009 /* VisionReader.swift */,
 			);
@@ -195,8 +201,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				000000000000000000100002 /* HebslateApp.swift in Sources */,
+				2CD3C3D26C5835C0D824BD44 /* BubbleLineAssembler.swift in Sources */,
 				000000000000000000100004 /* ClaudeClient.swift in Sources */,
 				000000000000000000100006 /* FrameExtractor.swift in Sources */,
+				D6F1202CD18FA812C55BEFFB /* GoogleClient.swift in Sources */,
 				000000000000000000100008 /* TranslationJob.swift in Sources */,
 				00000000000000000010000A /* VisionReader.swift in Sources */,
 				00000000000000000010000C /* AppSettings.swift in Sources */,

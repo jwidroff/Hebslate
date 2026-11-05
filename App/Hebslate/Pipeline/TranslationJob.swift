@@ -89,6 +89,9 @@ final class TranslationJob: Identifiable {
             case .claude:
                 try await translateWithClaude()
                 finish()
+            case .google:
+                try await translateWithGoogle()
+                finish()
             }
         } catch is CancellationError {
             phase = .failed("Cancelled")
@@ -97,7 +100,7 @@ final class TranslationJob: Identifiable {
         }
     }
 
-    private enum Reader { case vision(VisionReader), claude(ClaudeClient) }
+    private enum Reader { case vision(VisionReader), claude(ClaudeClient), google(GoogleClient) }
 
     private func resolveReader() throws -> Reader {
         switch settings.reader {
@@ -107,9 +110,13 @@ final class TranslationJob: Identifiable {
         case .claude:
             guard let key = settings.apiKey else { throw ClaudeClient.ClaudeError.missingKey }
             return .claude(ClaudeClient(apiKey: key, model: settings.model))
+        case .google:
+            guard let key = settings.googleApiKey else { throw GoogleClient.GoogleError.missingKey }
+            return .google(GoogleClient(apiKey: key, layout: settings.layout))
         case .auto:
             if VisionReader.supportsHebrew { return .vision(VisionReader(layout: settings.layout)) }
             if let key = settings.apiKey { return .claude(ClaudeClient(apiKey: key, model: settings.model)) }
+            if let key = settings.googleApiKey { return .google(GoogleClient(apiKey: key, layout: settings.layout)) }
             throw JobError.noReader
         }
     }
@@ -123,19 +130,24 @@ final class TranslationJob: Identifiable {
         case .claude:
             guard settings.apiKey != nil else { throw ClaudeClient.ClaudeError.missingKey }
             return .claude
+        case .google:
+            guard settings.googleApiKey != nil else { throw GoogleClient.GoogleError.missingKey }
+            return .google
         case .auto:
             // Prefer Claude when a key is set: it sees the whole conversation,
-            // so slang and context translate better. Otherwise stay on-device.
+            // so slang and context translate better. Otherwise stay on-device,
+            // and fall back to Google last.
             if settings.apiKey != nil { return .claude }
             if appleStatus != .unsupported { return .apple }
+            if settings.googleApiKey != nil { return .google }
             throw JobError.noTranslator
         }
     }
 
     private func readAll(_ frames: [KeyFrame], with reader: Reader) async throws {
-        var done = 0
         switch reader {
         case .vision(let vision):
+            var done = 0
             for frame in frames {
                 try Task.checkCancellation()
                 let reading = try await Task.detached(priority: .userInitiated) { try vision.read(frame) }.value
@@ -144,29 +156,37 @@ final class TranslationJob: Identifiable {
                 phase = .reading(done: done, total: frames.count)
             }
         case .claude(let client):
-            // Read up to 4 frames in parallel but stitch strictly in order.
-            var results: [Int: FrameReading] = [:]
-            var next = 0
-            try await withThrowingTaskGroup(of: (Int, FrameReading).self) { group in
-                var launched = 0
-                while launched < min(4, frames.count) {
-                    let i = launched, frame = frames[i]
-                    group.addTask { (i, try await client.readFrame(frame)) }
-                    launched += 1
+            try await readAllRemote(frames) { try await client.readFrame($0) }
+        case .google(let client):
+            try await readAllRemote(frames) { try await client.readFrame($0) }
+        }
+    }
+
+    /// Reads frames with a cloud engine, up to 4 requests in flight, but
+    /// stitches strictly in order.
+    private func readAllRemote(_ frames: [KeyFrame], read: @escaping @Sendable (KeyFrame) async throws -> FrameReading) async throws {
+        var done = 0
+        var results: [Int: FrameReading] = [:]
+        var next = 0
+        try await withThrowingTaskGroup(of: (Int, FrameReading).self) { group in
+            var launched = 0
+            while launched < min(4, frames.count) {
+                let i = launched, frame = frames[i]
+                group.addTask { (i, try await read(frame)) }
+                launched += 1
+            }
+            while let (i, reading) = try await group.next() {
+                results[i] = reading
+                while let r = results.removeValue(forKey: next) {
+                    absorb(r)
+                    next += 1
                 }
-                while let (i, reading) = try await group.next() {
-                    results[i] = reading
-                    while let r = results.removeValue(forKey: next) {
-                        absorb(r)
-                        next += 1
-                    }
-                    done += 1
-                    phase = .reading(done: done, total: frames.count)
-                    if launched < frames.count {
-                        let li = launched, frame = frames[li]
-                        group.addTask { (li, try await client.readFrame(frame)) }
-                        launched += 1
-                    }
+                done += 1
+                phase = .reading(done: done, total: frames.count)
+                if launched < frames.count {
+                    let li = launched, frame = frames[li]
+                    group.addTask { (li, try await read(frame)) }
+                    launched += 1
                 }
             }
         }
@@ -215,6 +235,24 @@ final class TranslationJob: Identifiable {
         }
     }
 
+    private func translateWithGoogle() async throws {
+        guard let key = settings.googleApiKey else { throw GoogleClient.GoogleError.missingKey }
+        let client = GoogleClient(apiKey: key, layout: settings.layout)
+        let pending = stitcher.untranslated
+        var done = 0
+        phase = .translating(done: 0, total: pending.count)
+
+        for chunkStart in stride(from: 0, to: pending.count, by: 40) {
+            try Task.checkCancellation()
+            let chunk = Array(pending[chunkStart..<min(chunkStart + 40, pending.count)])
+            let translations = try await client.translate(chunk)
+            stitcher.applyTranslations(translations)
+            done += chunk.count
+            phase = .translating(done: done, total: pending.count)
+            publish()
+        }
+    }
+
     /// Called by the view from `.translationTask` once Apple's session is ready.
     func translateWithApple(_ session: TranslationSession) async {
         guard phase == .awaitingAppleTranslation else { return }
@@ -256,8 +294,8 @@ final class TranslationJob: Identifiable {
             switch self {
             case .noFrames: "Couldn't read any frames from that video."
             case .noMessages: "No WhatsApp messages were found in the recording. Make sure the chat fills the screen while recording."
-            case .noReader: "On-device Hebrew text recognition isn't available on this iPhone. Add a Claude API key in Settings to read the recording with Claude."
-            case .noTranslator: "Hebrew isn't available in Apple Translate on this iPhone. Add a Claude API key in Settings to translate with Claude."
+            case .noReader: "On-device Hebrew text recognition isn't available on this iPhone. Add a Claude or Google API key in Settings to read the recording in the cloud."
+            case .noTranslator: "Hebrew isn't available in Apple Translate on this iPhone. Add a Claude or Google API key in Settings to translate in the cloud."
             case .appleTranslationUnsupported: "Apple Translate doesn't support Hebrew → English on this iPhone. Switch the translator to Claude in Settings."
             }
         }

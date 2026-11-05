@@ -3,26 +3,28 @@ import HebslateCore
 
 /// Which engine reads the text out of each frame.
 enum ReaderEngine: String, CaseIterable, Identifiable, Codable {
-    case auto, onDevice, claude
+    case auto, onDevice, claude, google
     var id: String { rawValue }
     var label: String {
         switch self {
         case .auto: "Automatic"
         case .onDevice: "On-device (Apple Vision)"
         case .claude: "Claude (cloud)"
+        case .google: "Google (cloud)"
         }
     }
 }
 
 /// Which engine translates Hebrew to English.
 enum TranslatorEngine: String, CaseIterable, Identifiable, Codable {
-    case auto, apple, claude
+    case auto, apple, claude, google
     var id: String { rawValue }
     var label: String {
         switch self {
         case .auto: "Automatic"
         case .apple: "Apple Translate (on-device)"
         case .claude: "Claude (cloud)"
+        case .google: "Google Translate (cloud)"
         }
     }
 }
@@ -54,6 +56,7 @@ struct SettingsSnapshot: Sendable {
     var translator: TranslatorEngine
     var model: String
     var apiKey: String?
+    var googleApiKey: String?
     var keepFraction: Double
     var layout: LineGrouper.Layout
 
@@ -63,11 +66,13 @@ struct SettingsSnapshot: Sendable {
         if d.object(forKey: SettingsKey.chatBottom) != nil { layout.chatBottom = d.double(forKey: SettingsKey.chatBottom) }
         if d.object(forKey: SettingsKey.outgoingOnRight) != nil { layout.outgoingOnRight = d.bool(forKey: SettingsKey.outgoingOnRight) }
         let key = KeychainStore.read(KeychainStore.claudeAPIKey)
+        let googleKey = KeychainStore.read(KeychainStore.googleAPIKey)
         return SettingsSnapshot(
             reader: ReaderEngine(rawValue: d.string(forKey: SettingsKey.reader) ?? "") ?? .auto,
             translator: TranslatorEngine(rawValue: d.string(forKey: SettingsKey.translator) ?? "") ?? .auto,
             model: d.string(forKey: SettingsKey.model) ?? ClaudeModels.default,
             apiKey: (key?.isEmpty ?? true) ? nil : key,
+            googleApiKey: (googleKey?.isEmpty ?? true) ? nil : googleKey,
             keepFraction: d.object(forKey: SettingsKey.keepFraction) == nil ? 0.45 : d.double(forKey: SettingsKey.keepFraction),
             layout: layout
         )

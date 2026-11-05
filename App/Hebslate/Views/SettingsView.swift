@@ -13,6 +13,7 @@ struct SettingsView: View {
     @AppStorage(SettingsKey.showOriginal) private var showOriginal = false
 
     @State private var apiKey = KeychainStore.read(KeychainStore.claudeAPIKey) ?? ""
+    @State private var googleApiKey = KeychainStore.read(KeychainStore.googleAPIKey) ?? ""
     @State private var visionHebrew = VisionReader.supportsHebrew
     @State private var appleStatus: LanguageAvailability.Status?
 
@@ -39,7 +40,7 @@ struct SettingsView: View {
             } header: {
                 Text("Engines")
             } footer: {
-                Text("Automatic reads on-device when this iPhone supports Hebrew text recognition and otherwise uses Claude. It translates with Claude when an API key is set (better with slang and context) and otherwise with Apple Translate, fully on-device.")
+                Text("Automatic reads on-device when this iPhone supports Hebrew text recognition, otherwise Claude if a key is set, otherwise Google if a key is set. It translates with Claude when a key is set (better with slang and context), otherwise Apple Translate on-device when supported, otherwise Google.")
             }
 
             Section {
@@ -56,6 +57,19 @@ struct SettingsView: View {
                 Text("Claude (optional)")
             } footer: {
                 Text("Create an API key at console.anthropic.com. It is stored in the iOS Keychain on this device only. Frames and text are sent to Anthropic only when a Claude engine is in use.")
+            }
+
+            Section {
+                SecureField("API key", text: $googleApiKey)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .onChange(of: googleApiKey) { _, value in
+                        KeychainStore.write(value.trimmingCharacters(in: .whitespacesAndNewlines), for: KeychainStore.googleAPIKey)
+                    }
+            } header: {
+                Text("Google Cloud (optional)")
+            } footer: {
+                Text("Create an API key in Google Cloud Console with the Cloud Vision API and Cloud Translation API enabled. It is stored in the iOS Keychain on this device only. Frames and text are sent to Google only when a Google engine is in use. Google Translate has no conversation context, so slang translates less reliably than with Claude.")
             }
 
             Section {

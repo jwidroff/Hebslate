@@ -1,9 +1,10 @@
 import Foundation
 import Security
 
-/// Minimal Keychain wrapper for the Claude API key.
+/// Minimal Keychain wrapper for the Claude and Google API keys.
 enum KeychainStore {
     static let claudeAPIKey = "claude-api-key"
+    static let googleAPIKey = "google-api-key"
     private static let service = "com.hebslate.app"
 
     static func read(_ account: String) -> String? {

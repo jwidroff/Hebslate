@@ -80,14 +80,16 @@ cd HebslateCore && swift test
 
 The **Settings** screen shows which engines this iPhone supports.
 
-| Step      | On-device (free, private)                                                                                  | Claude (cloud, needs an API key)                                    |
-|-----------|-------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------|
-| Read text | Apple Vision, when this iOS version supports Hebrew text recognition (checked at runtime)                  | Claude reads each key frame and returns bubbles as JSON              |
-| Translate | Apple Translate, when the Hebrew → English pair is available (the language pack downloads on first use)    | Claude translates with the conversation as context, so slang and abbreviations come out better |
+| Step      | On-device (free, private)                                                                                  | Claude (cloud, needs an API key)                                    | Google Cloud (cloud, needs an API key) |
+|-----------|-------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------|------------------------------------------|
+| Read text | Apple Vision, when this iOS version supports Hebrew text recognition (checked at runtime)                  | Claude reads each key frame and returns bubbles as JSON              | Cloud Vision (DOCUMENT_TEXT_DETECTION) finds the text lines; the same bubble-color heuristics used on-device turn them into messages |
+| Translate | Apple Translate, when the Hebrew → English pair is available (the language pack downloads on first use)    | Claude translates with the conversation as context, so slang and abbreviations come out better | Cloud Translation (v2) translates each message on its own, with no conversation context |
 
-**Automatic**, the default, reads on-device when possible and otherwise uses Claude. It translates with Claude when an API key is set and otherwise with Apple Translate.
+**Automatic**, the default, reads on-device when possible, otherwise Claude if a key is set, otherwise Google if a key is set. It translates with Claude when a key is set, otherwise Apple Translate on-device when supported, otherwise Google.
 
 To use Claude, create an API key at <https://console.anthropic.com>, then paste it in **Settings › Claude**. The key is stored only in the iOS Keychain on this device. Frames and text go to Anthropic only while a Claude engine is in use. The default model is Claude Opus 5.5. You can switch to Sonnet 5.5 or Haiku 5.5 for lower cost. Requests on Opus 5.5 and Sonnet 5.5 turn on server-side refusal fallbacks (`fallbacks: "default"`).
+
+To use Google, create an API key in Google Cloud Console with the **Cloud Vision API** and **Cloud Translation API** enabled, then paste it in **Settings › Google Cloud**. The key is stored only in the iOS Keychain on this device. Frames and text go to Google only while a Google engine is in use.
 
 ## Recording tips
 
