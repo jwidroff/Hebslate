@@ -23,6 +23,7 @@
 		00000000000000000010001C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 00000000000000000010001B /* Assets.xcassets */; };
 		2CD3C3D26C5835C0D824BD44 /* BubbleLineAssembler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80A25116B7127F5C2FAEEBFE /* BubbleLineAssembler.swift */; };
 		D6F1202CD18FA812C55BEFFB /* GoogleClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B15B0A5BCD2B69E39521C1E0 /* GoogleClient.swift */; };
+		EC70CD9F9A7AAFE461A65FFF /* DefaultAPIKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A1A871D5DF30C0618B150A1 /* DefaultAPIKeys.swift */; };
 		BAD02631309C9207004ED7A2 /* HebslateCore in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000100020 /* HebslateCore */; };
 /* End PBXBuildFile section */
 
@@ -43,6 +44,7 @@
 		00000000000000000010001B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		80A25116B7127F5C2FAEEBFE /* BubbleLineAssembler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BubbleLineAssembler.swift; sourceTree = "<group>"; };
 		B15B0A5BCD2B69E39521C1E0 /* GoogleClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleClient.swift; sourceTree = "<group>"; };
+		8A1A871D5DF30C0618B150A1 /* DefaultAPIKeys.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultAPIKeys.swift; sourceTree = "<group>"; };
 		00000000000000000010001D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		00000000000000000010001E /* Hebslate.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hebslate.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -105,6 +107,7 @@
 			children = (
 				00000000000000000010000B /* AppSettings.swift */,
 				00000000000000000010000D /* ConversationStore.swift */,
+				8A1A871D5DF30C0618B150A1 /* DefaultAPIKeys.swift */,
 				00000000000000000010000F /* KeychainStore.swift */,
 			);
 			path = Services;
@@ -209,6 +212,7 @@
 				00000000000000000010000A /* VisionReader.swift in Sources */,
 				00000000000000000010000C /* AppSettings.swift in Sources */,
 				00000000000000000010000E /* ConversationStore.swift in Sources */,
+				EC70CD9F9A7AAFE461A65FFF /* DefaultAPIKeys.swift in Sources */,
 				000000000000000000100010 /* KeychainStore.swift in Sources */,
 				000000000000000000100012 /* ConversationView.swift in Sources */,
 				000000000000000000100014 /* HomeView.swift in Sources */,

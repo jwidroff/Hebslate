@@ -56,7 +56,9 @@ struct SettingsView: View {
             } header: {
                 Text("Claude (optional)")
             } footer: {
-                Text("Create an API key at console.anthropic.com. It is stored in the iOS Keychain on this device only. Frames and text are sent to Anthropic only when a Claude engine is in use.")
+                Text(DefaultAPIKeys.claude == nil
+                     ? "Create an API key at console.anthropic.com. It is stored in the iOS Keychain on this device only. Frames and text are sent to Anthropic only when a Claude engine is in use."
+                     : "A default key is built into this app and used whenever this field is left blank. Paste a key here to override it. Stored in the iOS Keychain on this device only.")
             }
 
             Section {
@@ -69,7 +71,7 @@ struct SettingsView: View {
             } header: {
                 Text("Google Cloud (optional)")
             } footer: {
-                Text("Create an API key in Google Cloud Console with the Cloud Vision API and Cloud Translation API enabled. It is stored in the iOS Keychain on this device only. Frames and text are sent to Google only when a Google engine is in use. Google Translate has no conversation context, so slang translates less reliably than with Claude.")
+                Text((DefaultAPIKeys.google == nil ? "" : "A default key is built into this app and used whenever this field is left blank. Paste a key here to override it. ") + "Create an API key in Google Cloud Console with the Cloud Vision API and Cloud Translation API enabled. It is stored in the iOS Keychain on this device only. Frames and text are sent to Google only when a Google engine is in use. Google Translate has no conversation context, so slang translates less reliably than with Claude.")
             }
 
             Section {

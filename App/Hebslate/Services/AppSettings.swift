@@ -71,8 +71,8 @@ struct SettingsSnapshot: Sendable {
             reader: ReaderEngine(rawValue: d.string(forKey: SettingsKey.reader) ?? "") ?? .auto,
             translator: TranslatorEngine(rawValue: d.string(forKey: SettingsKey.translator) ?? "") ?? .auto,
             model: d.string(forKey: SettingsKey.model) ?? ClaudeModels.default,
-            apiKey: (key?.isEmpty ?? true) ? nil : key,
-            googleApiKey: (googleKey?.isEmpty ?? true) ? nil : googleKey,
+            apiKey: (key?.isEmpty ?? true) ? DefaultAPIKeys.claude : key,
+            googleApiKey: (googleKey?.isEmpty ?? true) ? DefaultAPIKeys.google : googleKey,
             keepFraction: d.object(forKey: SettingsKey.keepFraction) == nil ? 0.45 : d.double(forKey: SettingsKey.keepFraction),
             layout: layout
         )
