@@ -37,6 +37,7 @@ Features:
 * Share or copy the whole translation as a text transcript.
 * Translated chats are saved on the device under **Recent translations**.
 * **⋯ › View frames used** shows every key frame the recording was read from, in order, so if a message looks wrong, scrambled or missing you can check what the recording actually showed at that point.
+* **⋯ › Delete original recording** removes the source screen recording from Photos once you're done with it — only available when the video was picked via the Photos library, since a Files-imported video isn't a Photos asset.
 * Light and dark mode both use WhatsApp's colors.
 
 ## Project layout

@@ -37,11 +37,12 @@ final class TranslationJob: Identifiable {
     private var task: Task<Void, Never>?
     private let onFinish: (Conversation) -> Void
 
-    init(videoURL: URL, settings: SettingsSnapshot = .current(), onFinish: @escaping (Conversation) -> Void) {
+    init(videoURL: URL, sourceAssetIdentifier: String? = nil, settings: SettingsSnapshot = .current(),
+         onFinish: @escaping (Conversation) -> Void) {
         self.videoURL = videoURL
         self.settings = settings
         self.onFinish = onFinish
-        self.conversation = Conversation(title: "Translating…", messages: [])
+        self.conversation = Conversation(title: "Translating…", messages: [], sourceAssetIdentifier: sourceAssetIdentifier)
     }
 
     func start() {
@@ -162,6 +163,13 @@ final class TranslationJob: Identifiable {
     func delete(_ message: ChatMessage) {
         stitcher.remove(id: message.id)
         publish()
+        if phase == .finished { onFinish(conversation) }
+    }
+
+    /// Called once the original recording has been deleted from Photos, so
+    /// the "Delete original recording" action doesn't offer to delete it again.
+    func clearSourceAsset() {
+        conversation.sourceAssetIdentifier = nil
         if phase == .finished { onFinish(conversation) }
     }
 

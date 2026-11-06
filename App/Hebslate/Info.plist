@@ -32,7 +32,7 @@
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Hebslate opens the screen recordings you choose so it can translate the WhatsApp chat in them.</string>
+	<string>Hebslate opens the screen recordings you choose so it can translate the WhatsApp chat in them, and deletes the original recording from Photos if you ask it to.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 </dict>

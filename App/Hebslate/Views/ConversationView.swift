@@ -6,9 +6,13 @@ import SwiftUI
 struct ConversationView: View {
     let conversation: Conversation
     var onDelete: ((ChatMessage) -> Void)?
+    var onSourceDeleted: (() -> Void)?
 
     @AppStorage(SettingsKey.showOriginal) private var showOriginal = false
     @State private var showJumpButtons = false
+    @State private var showDeleteSourceConfirm = false
+    @State private var isDeletingSource = false
+    @State private var deleteSourceError: String?
 
     private var isGroupChat: Bool {
         Set(conversation.messages.compactMap(\.sender)).count > 1
@@ -55,6 +59,12 @@ struct ConversationView: View {
                     NavigationLink(value: FramesDestination(conversationID: conversation.id)) {
                         Label("View frames used", systemImage: "photo.on.rectangle.angled")
                     }
+                    if conversation.sourceAssetIdentifier != nil {
+                        Button(role: .destructive) { showDeleteSourceConfirm = true } label: {
+                            Label("Delete original recording", systemImage: "trash")
+                        }
+                        .disabled(isDeletingSource)
+                    }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
@@ -62,6 +72,28 @@ struct ConversationView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(for: FramesDestination.self) { FramesView(conversationID: $0.conversationID) }
+        .confirmationDialog("Delete the original recording from Photos?", isPresented: $showDeleteSourceConfirm, titleVisibility: .visible) {
+            Button("Delete Recording", role: .destructive) { Task { await deleteSource() } }
+        } message: {
+            Text("This can't be undone. The translated chat stays in Hebslate either way.")
+        }
+        .alert("Couldn't delete the recording", isPresented: Binding(get: { deleteSourceError != nil }, set: { if !$0 { deleteSourceError = nil } })) {
+            Button("OK") { deleteSourceError = nil }
+        } message: {
+            Text(deleteSourceError ?? "")
+        }
+    }
+
+    private func deleteSource() async {
+        guard let identifier = conversation.sourceAssetIdentifier, !isDeletingSource else { return }
+        isDeletingSource = true
+        defer { isDeletingSource = false }
+        do {
+            try await PhotoLibraryService.deleteRecording(identifier: identifier)
+            onSourceDeleted?()
+        } catch {
+            deleteSourceError = error.localizedDescription
+        }
     }
 
     private var header: some View {

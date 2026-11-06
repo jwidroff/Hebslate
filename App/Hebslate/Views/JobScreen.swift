@@ -8,7 +8,8 @@ struct JobScreen: View {
 
     var body: some View {
         ConversationView(conversation: job.conversation,
-                         onDelete: job.phase == .finished ? { (m: ChatMessage) in job.delete(m) } : nil)
+                         onDelete: job.phase == .finished ? { (m: ChatMessage) in job.delete(m) } : nil,
+                         onSourceDeleted: { job.clearSourceAsset() })
             .safeAreaInset(edge: .top, spacing: 0) { banner }
             .onAppear { job.start() }
             .onDisappear { if job.phase.isRunning { job.cancel() } }

@@ -128,12 +128,19 @@ public struct Conversation: Codable, Sendable, Identifiable, Hashable {
     public var title: String
     public var createdAt: Date
     public var messages: [ChatMessage]
+    /// The Photos asset the recording was imported from, if it came from the
+    /// photo library (not Files) — lets the app offer to delete the original
+    /// recording once it's been translated. `nil` for older conversations
+    /// saved before this existed, and for recordings imported from Files.
+    public var sourceAssetIdentifier: String?
 
-    public init(id: UUID = UUID(), title: String, createdAt: Date = Date(), messages: [ChatMessage]) {
+    public init(id: UUID = UUID(), title: String, createdAt: Date = Date(), messages: [ChatMessage],
+                sourceAssetIdentifier: String? = nil) {
         self.id = id
         self.title = title
         self.createdAt = createdAt
         self.messages = messages
+        self.sourceAssetIdentifier = sourceAssetIdentifier
     }
 
     /// Plain-text transcript of the translation, for sharing.

@@ -113,7 +113,7 @@ struct HomeView: View {
                 errorMessage = "The selected item isn't a video."
                 return
             }
-            startJob(file.url)
+            startJob(file.url, sourceAssetIdentifier: item.itemIdentifier)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -129,8 +129,8 @@ struct HomeView: View {
         }
     }
 
-    private func startJob(_ url: URL) {
-        job = TranslationJob(videoURL: url) { [store] conversation in
+    private func startJob(_ url: URL, sourceAssetIdentifier: String? = nil) {
+        job = TranslationJob(videoURL: url, sourceAssetIdentifier: sourceAssetIdentifier) { [store] conversation in
             store.save(conversation)
         }
     }
@@ -211,9 +211,14 @@ struct SavedConversationScreen: View {
     @State var conversation: Conversation
 
     var body: some View {
-        ConversationView(conversation: conversation) { message in
-            conversation.messages.removeAll { $0.id == message.id }
-            store.save(conversation)
-        }
+        ConversationView(conversation: conversation,
+                          onDelete: { message in
+                              conversation.messages.removeAll { $0.id == message.id }
+                              store.save(conversation)
+                          },
+                          onSourceDeleted: {
+                              conversation.sourceAssetIdentifier = nil
+                              store.save(conversation)
+                          })
     }
 }
